@@ -12,19 +12,28 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "FishExplorer"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999
+ScreenGui.IgnoreGuiInset = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 700, 0, 550)
 MainFrame.Position = UDim2.new(0.5, -350, 0.5, -275)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.BorderSizePixel = 0
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.ZIndex = 10
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 255, 150)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
 
 -- Title
 local Title = Instance.new("TextLabel")
@@ -35,6 +44,7 @@ Title.Text = "🐟 FISCH - Advanced Fish Explorer"
 Title.TextColor3 = Color3.fromRGB(0, 255, 150)
 Title.TextSize = 20
 Title.Font = Enum.Font.SourceSansBold
+Title.ZIndex = 11
 Title.Parent = MainFrame
 
 -- Status Label
@@ -47,6 +57,7 @@ StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.SourceSans
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.ZIndex = 11
 StatusLabel.Parent = MainFrame
 
 -- ScrollFrame untuk list
