@@ -1,364 +1,320 @@
--- FISCH GAME - Advanced Fish Explorer & Logger
--- Untuk explore ReplicatedStorage dan auto-detect fish data
+-- FISH DATA LOGGER - Advanced Catch Tracker
+-- Menangkap data lengkap ikan setiap caught
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-
 local player = Players.LocalPlayer
 
--- GUI Setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FishExplorer"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999
-ScreenGui.IgnoreGuiInset = false
+-- Tunggu sampai Fishing module tersedia
+local Fishing
+local FishingController
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 350)
-MainFrame.Position = UDim2.new(0, 10, 0, 100)
-MainFrame.AnchorPoint = Vector2.new(0, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.ZIndex = 10
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(0, 255, 150)
-UIStroke.Thickness = 2
-UIStroke.Parent = MainFrame
-
--- Title
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 30)
-Title.Position = UDim2.new(0, 10, 0, 5)
-Title.BackgroundTransparency = 1
-Title.Text = "🐟 Fish Explorer"
-Title.TextColor3 = Color3.fromRGB(0, 255, 150)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
-Title.ZIndex = 11
-Title.Parent = MainFrame
-
--- Status Label
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -20, 0, 18)
-StatusLabel.Position = UDim2.new(0, 10, 0, 35)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Ready"
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.TextSize = 12
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.ZIndex = 11
-StatusLabel.Parent = MainFrame
-
--- ScrollFrame untuk list
-local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, -20, 1, -130)
-ScrollFrame.Position = UDim2.new(0, 10, 0, 55)
-ScrollFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-ScrollFrame.BorderSizePixel = 0
-ScrollFrame.ScrollBarThickness = 6
-ScrollFrame.ZIndex = 10
-ScrollFrame.Parent = MainFrame
-
-local ScrollCorner = Instance.new("UICorner")
-ScrollCorner.CornerRadius = UDim.new(0, 8)
-ScrollCorner.Parent = ScrollFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 5)
-UIListLayout.Parent = ScrollFrame
-
--- Button Container
-local ButtonFrame = Instance.new("Frame")
-ButtonFrame.Size = UDim2.new(1, -20, 0, 65)
-ButtonFrame.Position = UDim2.new(0, 10, 1, -70)
-ButtonFrame.BackgroundTransparency = 1
-ButtonFrame.ZIndex = 10
-ButtonFrame.Parent = MainFrame
-
--- Scan ReplicatedStorage Button
-local ScanRSButton = Instance.new("TextButton")
-ScanRSButton.Size = UDim2.new(0.48, 0, 0, 28)
-ScanRSButton.Position = UDim2.new(0, 0, 0, 0)
-ScanRSButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-ScanRSButton.Text = "📦 Explore RS"
-ScanRSButton.TextColor3 = Color3.new(1, 1, 1)
-ScanRSButton.TextSize = 12
-ScanRSButton.Font = Enum.Font.SourceSansBold
-ScanRSButton.ZIndex = 11
-ScanRSButton.Parent = ButtonFrame
-
-local ScanRSCorner = Instance.new("UICorner")
-ScanRSCorner.CornerRadius = UDim.new(0, 5)
-ScanRSCorner.Parent = ScanRSButton
-
--- Scan Fish Data Button
-local ScanFishButton = Instance.new("TextButton")
-ScanFishButton.Size = UDim2.new(0.48, 0, 0, 28)
-ScanFishButton.Position = UDim2.new(0.52, 0, 0, 0)
-ScanFishButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-ScanFishButton.Text = "🔍 Scan Fish"
-ScanFishButton.TextColor3 = Color3.new(1, 1, 1)
-ScanFishButton.TextSize = 12
-ScanFishButton.Font = Enum.Font.SourceSansBold
-ScanFishButton.ZIndex = 11
-ScanFishButton.Parent = ButtonFrame
-
-local ScanFishCorner = Instance.new("UICorner")
-ScanFishCorner.CornerRadius = UDim.new(0, 5)
-ScanFishCorner.Parent = ScanFishButton
-
--- Clear Button
-local ClearButton = Instance.new("TextButton")
-ClearButton.Size = UDim2.new(0.48, 0, 0, 28)
-ClearButton.Position = UDim2.new(0, 0, 0, 33)
-ClearButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
-ClearButton.Text = "🗑️ Clear"
-ClearButton.TextColor3 = Color3.new(1, 1, 1)
-ClearButton.TextSize = 12
-ClearButton.Font = Enum.Font.SourceSansBold
-ClearButton.ZIndex = 11
-ClearButton.Parent = ButtonFrame
-
-local ClearCorner = Instance.new("UICorner")
-ClearCorner.CornerRadius = UDim.new(0, 5)
-ClearCorner.Parent = ClearButton
-
--- Destroy Script Button
-local DestroyButton = Instance.new("TextButton")
-DestroyButton.Size = UDim2.new(0.48, 0, 0, 28)
-DestroyButton.Position = UDim2.new(0.52, 0, 0, 33)
-DestroyButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-DestroyButton.Text = "❌ Delete"
-DestroyButton.TextColor3 = Color3.new(1, 1, 1)
-DestroyButton.TextSize = 12
-DestroyButton.Font = Enum.Font.SourceSansBold
-DestroyButton.ZIndex = 11
-DestroyButton.Parent = ButtonFrame
-
-local DestroyCorner = Instance.new("UICorner")
-DestroyCorner.CornerRadius = UDim.new(0, 5)
-DestroyCorner.Parent = DestroyButton
-
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Fungsi tambah log
-local function addLog(text, color)
-    local Entry = Instance.new("TextLabel")
-    Entry.Size = UDim2.new(1, -10, 0, 0)
-    Entry.AutomaticSize = Enum.AutomaticSize.Y
-    Entry.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    Entry.Text = "  " .. text
-    Entry.TextColor3 = color or Color3.new(1, 1, 1)
-    Entry.TextSize = 13
-    Entry.Font = Enum.Font.SourceSans
-    Entry.TextXAlignment = Enum.TextXAlignment.Left
-    Entry.TextYAlignment = Enum.TextYAlignment.Top
-    Entry.TextWrapped = true
-    Entry.Parent = ScrollFrame
-    
-    local Padding = Instance.new("UIPadding")
-    Padding.PaddingTop = UDim.new(0, 5)
-    Padding.PaddingBottom = UDim.new(0, 5)
-    Padding.Parent = Entry
-    
-    local EntryCorner = Instance.new("UICorner")
-    EntryCorner.CornerRadius = UDim.new(0, 4)
-    EntryCorner.Parent = Entry
-    
-    task.wait()
-    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
-    ScrollFrame.CanvasPosition = Vector2.new(0, ScrollFrame.CanvasSize.Y.Offset)
+-- Fungsi untuk mendapatkan module dengan retry
+local function getFishingModule()
+    repeat
+        Fishing = ReplicatedStorage:FindFirstChild("Fishing")
+        if Fishing then
+            FishingController = require(Fishing:WaitForChild("FishingController"))
+            return true
+        end
+        wait(1)
+    until false
 end
 
--- Fungsi explore ReplicatedStorage secara detail
-local function exploreReplicatedStorage()
-    addLog("=== EXPLORING REPLICATED STORAGE ===", Color3.fromRGB(255, 255, 0))
-    StatusLabel.Text = "Status: Scanning ReplicatedStorage..."
+-- Setup GUI (gunakan GUI yang sudah ada atau buat yang baru)
+local function setupEnhancedLogger()
+    -- GUI Setup mirip dengan yang sebelumnya
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "FishDataLogger"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
     
-    local totalItems = 0
-    local modules = 0
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 450, 0, 250)
+    MainFrame.Position = UDim2.new(0, 470, 0, 100)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 2
+    MainFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
     
-    local function exploreFolder(folder, indent)
-        indent = indent or ""
-        for _, item in pairs(folder:GetChildren()) do
-            totalItems = totalItems + 1
-            local itemType = item.ClassName
-            local itemName = item.Name
-            
-            if item:IsA("ModuleScript") then
-                modules = modules + 1
-                addLog(indent .. "📜 ModuleScript: " .. itemName, Color3.fromRGB(150, 150, 255))
-                
-                -- Try to require dan lihat isinya
-                local success, data = pcall(function()
-                    return require(item)
-                end)
-                
-                if success and type(data) == "table" then
-                    local keys = {}
-                    for k, _ in pairs(data) do
-                        table.insert(keys, tostring(k))
-                    end
-                    if #keys > 0 then
-                        addLog(indent .. "  └─ Keys: " .. table.concat(keys, ", "), Color3.fromRGB(100, 200, 100))
-                    end
-                end
-            elseif item:IsA("Folder") then
-                addLog(indent .. "📁 Folder: " .. itemName, Color3.fromRGB(200, 200, 100))
-                exploreFolder(item, indent .. "  ")
-            else
-                addLog(indent .. "📄 " .. itemType .. ": " .. itemName, Color3.fromRGB(150, 150, 150))
-            end
-        end
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -20, 0, 30)
+    Title.Position = UDim2.new(0, 10, 0, 5)
+    Title.BackgroundTransparency = 1
+    Title.Text = "🎣 FISH CATCH LOGGER"
+    Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+    Title.TextSize = 16
+    Title.Font = Enum.Font.SourceSansBold
+    Title.Parent = MainFrame
+    
+    -- Stats Display
+    local StatsFrame = Instance.new("Frame")
+    StatsFrame.Size = UDim2.new(1, -20, 0, 60)
+    StatsFrame.Position = UDim2.new(0, 10, 0, 40)
+    StatsFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    StatsFrame.Parent = MainFrame
+    
+    local TotalCaught = Instance.new("TextLabel")
+    TotalCaught.Size = UDim2.new(0.48, 0, 0, 25)
+    TotalCaught.Position = UDim2.new(0, 5, 0, 5)
+    TotalCaught.BackgroundTransparency = 1
+    TotalCaught.Text = "Total: 0"
+    TotalCaught.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TotalCaught.TextSize = 14
+    TotalCaught.Font = Enum.Font.SourceSansBold
+    TotalCaught.Parent = StatsFrame
+    
+    local LastFish = Instance.new("TextLabel")
+    LastFish.Size = UDim2.new(0.48, 0, 0, 25)
+    LastFish.Position = UDim2.new(0.52, 0, 0, 5)
+    LastFish.BackgroundTransparency = 1
+    LastFish.Text = "Last: None"
+    LastFish.TextColor3 = Color3.fromRGB(200, 200, 200)
+    LastFish.TextSize = 14
+    LastFish.Font = Enum.Font.SourceSansBold
+    LastFish.Parent = StatsFrame
+    
+    local BestFish = Instance.new("TextLabel")
+    BestFish.Size = UDim2.new(1, -10, 0, 25)
+    BestFish.Position = UDim2.new(0, 5, 0, 30)
+    BestFish.BackgroundTransparency = 1
+    BestFish.Text = "Best: None"
+    BestFish.TextColor3 = Color3.fromRGB(200, 200, 200)
+    BestFish.TextSize = 14
+    BestFish.Font = Enum.Font.SourceSansBold
+    BestFish.Parent = StatsFrame
+    
+    -- Log List
+    local LogScroll = Instance.new("ScrollingFrame")
+    LogScroll.Size = UDim2.new(1, -20, 1, -130)
+    LogScroll.Position = UDim2.new(0, 10, 0, 105)
+    LogScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    LogScroll.ScrollBarThickness = 6
+    LogScroll.Parent = MainFrame
+    
+    local LogLayout = Instance.new("UIListLayout")
+    LogLayout.Padding = UDim.new(0, 3)
+    LogLayout.Parent = LogScroll
+    
+    return {
+        ScreenGui = ScreenGui,
+        TotalCaught = TotalCaught,
+        LastFish = LastFish,
+        BestFish = BestFish,
+        LogScroll = LogScroll
+    }
+end
+
+-- Data tracking
+local fishLog = {}
+local totalCaught = 0
+local bestWeight = 0
+local bestFishName = ""
+local gui = setupEnhancedLogger()
+
+-- Fungsi untuk menambahkan log
+local function addCatchLog(fishData, color)
+    totalCaught = totalCaught + 1
+    
+    -- Update stats
+    gui.TotalCaught.Text = "Total: " .. totalCaught
+    gui.LastFish.Text = "Last: " .. fishData.Name
+    
+    -- Check for best fish
+    local weight = fishData.Weight or 0
+    if weight > bestWeight then
+        bestWeight = weight
+        bestFishName = fishData.Name
+        gui.BestFish.Text = "Best: " .. bestFishName .. " (" .. weight .. "kg)"
     end
     
-    exploreFolder(ReplicatedStorage)
+    -- Create log entry
+    local Entry = Instance.new("Frame")
+    Entry.Size = UDim2.new(1, -10, 0, 35)
+    Entry.BackgroundColor3 = color or Color3.fromRGB(20, 20, 30)
+    Entry.Parent = gui.LogScroll
     
-    addLog(string.format("✅ Total items: %d | ModuleScripts: %d", totalItems, modules), Color3.fromRGB(0, 255, 0))
-    StatusLabel.Text = string.format("Status: Found %d items, %d modules", totalItems, modules)
+    local NameLabel = Instance.new("TextLabel")
+    NameLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+    NameLabel.Position = UDim2.new(0, 5, 0, 5)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.Text = fishData.Name
+    NameLabel.TextColor3 = Color3.new(1, 1, 1)
+    NameLabel.TextSize = 12
+    NameLabel.Font = Enum.Font.SourceSansBold
+    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    NameLabel.Parent = Entry
+    
+    local DetailsLabel = Instance.new("TextLabel")
+    DetailsLabel.Size = UDim2.new(0.38, 0, 0.5, 0)
+    DetailsLabel.Position = UDim2.new(0.6, 5, 0, 5)
+    DetailsLabel.BackgroundTransparency = 1
+    DetailsLabel.Text = fishData.Rarity .. " | " .. (fishData.Weight or "?") .. "kg"
+    DetailsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    DetailsLabel.TextSize = 11
+    DetailsLabel.TextXAlignment = Enum.TextXAlignment.Right
+    DetailsLabel.Parent = Entry
+    
+    local MutationLabel = Instance.new("TextLabel")
+    MutationLabel.Size = UDim2.new(1, -10, 0.5, 0)
+    MutationLabel.Position = UDim2.new(0, 5, 0.5, 0)
+    MutationLabel.BackgroundTransparency = 1
+    MutationLabel.Text = "Mutation: " .. (fishData.Mutation or "None")
+    MutationLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+    MutationLabel.TextSize = 11
+    MutationLabel.TextXAlignment = Enum.TextXAlignment.Left
+    MutationLabel.Parent = Entry
+    
+    -- Update scroll size
+    task.wait()
+    gui.LogScroll.CanvasSize = UDim2.new(0, 0, 0, LogLayout.AbsoluteContentSize.Y + 10)
+    gui.LogScroll.CanvasPosition = Vector2.new(0, gui.LogScroll.CanvasSize.Y.Offset)
+    
+    -- Simpan ke log
+    table.insert(fishLog, {
+        Time = os.date("%H:%M:%S"),
+        Data = fishData
+    })
+    
+    -- Print ke console juga
+    print(string.format("[FISH CAUGHT] %s | Rarity: %s | Weight: %skg | Mutation: %s | Time: %s",
+        fishData.Name, fishData.Rarity, tostring(fishData.Weight), fishData.Mutation or "None", os.date("%H:%M:%S")))
 end
 
--- Fungsi scan fish database
-local function scanFishDatabase()
-    addLog("=== SCANNING FISH DATABASE ===", Color3.fromRGB(255, 255, 0))
-    StatusLabel.Text = "Status: Scanning for fish data..."
+-- Warna berdasarkan rarity
+local rarityColors = {
+    Common = Color3.fromRGB(150, 150, 150),
+    Uncommon = Color3.fromRGB(100, 200, 100),
+    Rare = Color3.fromRGB(100, 150, 255),
+    Epic = Color3.fromRGB(200, 100, 255),
+    Legendary = Color3.fromRGB(255, 215, 0),
+    Mythical = Color3.fromRGB(255, 100, 100)
+}
+
+-- FUNGSI UTAMA: Hook FishCaught event
+local function setupFishCaughtHook()
+    getFishingModule() -- Pastikan module sudah di-load
     
-    local fishFound = 0
+    print("[FISH LOGGER] Initializing...")
     
-    -- Cari di ReplicatedStorage
-    for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-        if item:IsA("ModuleScript") then
-            local name = item.Name:lower()
-            if name:find("fish") or name:find("bestiary") or name:find("catch") or name:find("dex") then
-                addLog("🎯 Possible fish module: " .. item.Name, Color3.fromRGB(255, 200, 0))
+    -- Method 1: Hook ke FishCaught event jika ada
+    if FishingController.FishCaught then
+        print("[FISH LOGGER] Hooking to FishCaught event...")
+        
+        -- Simpan fungsi asli
+        local originalFishCaught = FishingController.FishCaught
+        
+        -- Override fungsi
+        FishingController.FishCaught = function(fishData, ...)
+            -- Log fish data
+            if fishData and type(fishData) == "table" then
+                -- Format data yang diterima
+                local formattedData = {
+                    Name = fishData.Name or fishData.FishName or "Unknown Fish",
+                    Rarity = fishData.Rarity or fishData.Tier or "Common",
+                    Weight = fishData.Weight or fishData.Size or fishData.Pounds,
+                    Mutation = fishData.Mutation or fishData.Shiny or fishData.Variant or "None",
+                    GUID = fishData.GUID or fishData.Id,
+                    RawData = fishData -- Simpan data mentah
+                }
                 
-                local success, data = pcall(function()
-                    return require(item)
-                end)
+                -- Get color berdasarkan rarity
+                local color = rarityColors[formattedData.Rarity] or Color3.fromRGB(100, 200, 100)
                 
-                if success and type(data) == "table" then
-                    -- Coba parse fish data
-                    for key, value in pairs(data) do
-                        if type(value) == "table" then
-                            local fishName = value.Name or value.FishName or tostring(key)
-                            local rarity = value.Rarity or value.Tier or "?"
-                            local weight = value.Weight or value.MinWeight or value.MaxWeight or "?"
-                            local mutation = value.Mutation or value.Shiny or value.Variant or "None"
-                            
-                            fishFound = fishFound + 1
-                            local info = string.format("🐟 %s | Rarity: %s | Weight: %s | Mutation: %s",
-                                fishName, tostring(rarity), tostring(weight), tostring(mutation))
-                            addLog(info, Color3.fromRGB(100, 255, 200))
+                -- Tambah ke log
+                addCatchLog(formattedData, color)
+                
+                -- Also add to your existing Fish Explorer GUI
+                local explorerGui = player.PlayerGui:FindFirstChild("FishExplorer")
+                if explorerGui then
+                    local mainFrame = explorerGui:FindFirstChild("MainFrame")
+                    if mainFrame then
+                        local statusLabel = mainFrame:FindFirstChild("StatusLabel")
+                        if statusLabel then
+                            statusLabel.Text = string.format("Status: Caught %s (%s)", 
+                                formattedData.Name, formattedData.Rarity)
                         end
                     end
                 end
             end
+            
+            -- Panggil fungsi asli
+            return originalFishCaught(fishData, ...)
+        end
+        
+        print("[FISH LOGGER] Successfully hooked to FishCaught!")
+    else
+        print("[FISH LOGGER] FishCaught event not found, trying alternative methods...")
+    end
+    
+    -- Method 2: Connect langsung ke RemoteEvent jika ada
+    local fishingFolder = ReplicatedStorage:FindFirstChild("Fishing")
+    if fishingFolder then
+        for _, item in pairs(fishingFolder:GetChildren()) do
+            if item:IsA("RemoteEvent") and (item.Name:find("Fish") or item.Name:find("Catch")) then
+                print("[FISH LOGGER] Found RemoteEvent: " .. item.Name)
+                
+                -- Hook ke OnClientEvent
+                item.OnClientEvent:Connect(function(fishData)
+                    print("[FISH LOGGER] RemoteEvent triggered:", fishData)
+                    
+                    if fishData then
+                        local formattedData = {
+                            Name = fishData.Name or "Unknown",
+                            Rarity = fishData.Rarity or "Common",
+                            Weight = fishData.Weight or 0,
+                            Mutation = fishData.Mutation or "None"
+                        }
+                        
+                        local color = rarityColors[formattedData.Rarity] or Color3.fromRGB(100, 200, 100)
+                        addCatchLog(formattedData, color)
+                    end
+                end)
+            end
         end
     end
     
-    addLog(string.format("✅ Fish scan complete! Found %d entries", fishFound), Color3.fromRGB(0, 255, 0))
-    StatusLabel.Text = string.format("Status: Found %d fish", fishFound)
-end
-
--- Hook catch events - IMPROVED
-local connections = {}
-
-local function setupCatchDetection()
-    -- Monitor player's PlayerGui untuk catch notifications
-    local gui = player:WaitForChild("PlayerGui")
-    
-    -- Method 1: Monitor DescendantAdded untuk catch UI
-    connections[#connections + 1] = gui.DescendantAdded:Connect(function(obj)
-        task.wait(0.05)
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-            local text = obj.Text
-            if text:lower():find("caught") or text:lower():find("you got") then
-                -- Extract fish name dari text
-                local fishName = text:match("You got: (.+)") or text:match("Caught (.+)") or text:match("(%a+%s?%a*)$")
-                if fishName then
-                    addLog("🎣 CAUGHT! " .. fishName .. " | Time: " .. os.date("%H:%M:%S"), Color3.fromRGB(255, 215, 0))
+    -- Method 3: Monitor GetCurrentGUID untuk tracking
+    task.spawn(function()
+        while true do
+            wait(2)
+            
+            -- Coba panggil GetCurrentGUID jika ada
+            if FishingController.GetCurrentGUID then
+                local success, currentGUID = pcall(FishingController.GetCurrentGUID)
+                if success and currentGUID then
+                    -- Track GUID untuk mengetahui ikan yang sedang di-hook
+                    print("[FISH LOGGER] Current GUID:", currentGUID)
                 end
             end
         end
     end)
     
-    -- Method 2: Monitor Workspace
-    connections[#connections + 1] = Workspace.DescendantAdded:Connect(function(obj)
-        task.wait(0.1)
-        if obj:IsA("Model") and obj.Name ~= player.Name then
-            -- Cek apakah ini fish model
-            local hasAttributes = false
-            for _, attr in pairs(obj:GetAttributes()) do
-                hasAttributes = true
-                break
-            end
-            
-            if hasAttributes or obj:FindFirstChild("Weight") or obj:FindFirstChild("Rarity") then
-                local weight = obj:GetAttribute("Weight") or (obj:FindFirstChild("Weight") and obj.Weight.Value) or "?"
-                local rarity = obj:GetAttribute("Rarity") or (obj:FindFirstChild("Rarity") and obj.Rarity.Value) or "?"
-                local mutation = obj:GetAttribute("Mutation") or obj:GetAttribute("Shiny") or "None"
-                
-                local info = string.format("🎣 CAUGHT! %s | Weight: %s | Rarity: %s | Mutation: %s | Time: %s",
-                    obj.Name, tostring(weight), tostring(rarity), tostring(mutation), os.date("%H:%M:%S"))
-                addLog(info, Color3.fromRGB(255, 215, 0))
-            end
+    -- Method 4: Monitor attribute changes pada player
+    player:GetAttributeChangedSignal("LastCaughtFish"):Connect(function()
+        local fish = player:GetAttribute("LastCaughtFish")
+        if fish then
+            print("[FISH LOGGER] Attribute changed:", fish)
         end
     end)
+    
+    print("[FISH LOGGER] Setup complete! Ready to log catches.")
 end
 
--- Button Actions
-ScanRSButton.MouseButton1Click:Connect(function()
-    exploreReplicatedStorage()
-end)
-
-ScanFishButton.MouseButton1Click:Connect(function()
-    scanFishDatabase()
-end)
-
-ClearButton.MouseButton1Click:Connect(function()
-    for _, child in pairs(ScrollFrame:GetChildren()) do
-        if child:IsA("TextLabel") then
-            child:Destroy()
-        end
+-- Export fungsi untuk memulai
+return {
+    Start = setupFishCaughtHook,
+    GetLog = function() return fishLog end,
+    GetStats = function() 
+        return {
+            Total = totalCaught,
+            BestWeight = bestWeight,
+            BestFish = bestFishName,
+            Logs = fishLog
+        }
     end
-    addLog("🗑️ Log cleared!", Color3.fromRGB(255, 100, 100))
-    StatusLabel.Text = "Status: Log cleared"
-end)
-
-DestroyButton.MouseButton1Click:Connect(function()
-    addLog("❌ Destroying script in 2 seconds...", Color3.fromRGB(255, 50, 50))
-    StatusLabel.Text = "Status: Destroying..."
-    task.wait(2)
-    
-    -- Disconnect semua connections
-    for _, conn in pairs(connections) do
-        conn:Disconnect()
-    end
-    
-    -- Destroy GUI
-    ScreenGui:Destroy()
-    
-    print("Fish Explorer destroyed!")
-end)
-
--- Initialize
-addLog("✅ Fish Explorer loaded!", Color3.fromRGB(0, 255, 150))
-addLog("📌 Click 'Explore ReplicatedStorage' to see all modules", Color3.fromRGB(200, 200, 200))
-addLog("📌 Click 'Scan Fish Database' to find fish data", Color3.fromRGB(200, 200, 200))
-addLog("📌 Auto-logging fish catches...", Color3.fromRGB(200, 200, 200))
-
-setupCatchDetection()
-
-print("Fish Explorer Active!")
+}
