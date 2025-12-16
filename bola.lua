@@ -16,8 +16,9 @@ ScreenGui.DisplayOrder = 999
 ScreenGui.IgnoreGuiInset = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 700, 0, 550)
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -275)
+MainFrame.Size = UDim2.new(0, 400, 0, 350)
+MainFrame.Position = UDim2.new(0, 10, 0, 100)
+MainFrame.AnchorPoint = Vector2.new(0, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
@@ -27,7 +28,7 @@ MainFrame.ZIndex = 10
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
 local UIStroke = Instance.new("UIStroke")
@@ -37,24 +38,24 @@ UIStroke.Parent = MainFrame
 
 -- Title
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 35)
+Title.Size = UDim2.new(1, -20, 0, 30)
 Title.Position = UDim2.new(0, 10, 0, 5)
 Title.BackgroundTransparency = 1
-Title.Text = "🐟 FISCH - Advanced Fish Explorer"
+Title.Text = "🐟 Fish Explorer"
 Title.TextColor3 = Color3.fromRGB(0, 255, 150)
-Title.TextSize = 20
+Title.TextSize = 16
 Title.Font = Enum.Font.SourceSansBold
 Title.ZIndex = 11
 Title.Parent = MainFrame
 
 -- Status Label
 local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -20, 0, 20)
-StatusLabel.Position = UDim2.new(0, 10, 0, 40)
+StatusLabel.Size = UDim2.new(1, -20, 0, 18)
+StatusLabel.Position = UDim2.new(0, 10, 0, 35)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "Status: Ready"
 StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.TextSize = 14
+StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.SourceSans
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.ZIndex = 11
@@ -62,11 +63,12 @@ StatusLabel.Parent = MainFrame
 
 -- ScrollFrame untuk list
 local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, -20, 1, -170)
-ScrollFrame.Position = UDim2.new(0, 10, 0, 65)
+ScrollFrame.Size = UDim2.new(1, -20, 1, -130)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 55)
 ScrollFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 ScrollFrame.BorderSizePixel = 0
-ScrollFrame.ScrollBarThickness = 8
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.ZIndex = 10
 ScrollFrame.Parent = MainFrame
 
 local ScrollCorner = Instance.new("UICorner")
@@ -79,69 +81,74 @@ UIListLayout.Parent = ScrollFrame
 
 -- Button Container
 local ButtonFrame = Instance.new("Frame")
-ButtonFrame.Size = UDim2.new(1, -20, 0, 90)
-ButtonFrame.Position = UDim2.new(0, 10, 1, -95)
+ButtonFrame.Size = UDim2.new(1, -20, 0, 65)
+ButtonFrame.Position = UDim2.new(0, 10, 1, -70)
 ButtonFrame.BackgroundTransparency = 1
+ButtonFrame.ZIndex = 10
 ButtonFrame.Parent = MainFrame
 
 -- Scan ReplicatedStorage Button
 local ScanRSButton = Instance.new("TextButton")
-ScanRSButton.Size = UDim2.new(0.48, 0, 0, 35)
+ScanRSButton.Size = UDim2.new(0.48, 0, 0, 28)
 ScanRSButton.Position = UDim2.new(0, 0, 0, 0)
 ScanRSButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-ScanRSButton.Text = "📦 Explore ReplicatedStorage"
+ScanRSButton.Text = "📦 Explore RS"
 ScanRSButton.TextColor3 = Color3.new(1, 1, 1)
-ScanRSButton.TextSize = 14
+ScanRSButton.TextSize = 12
 ScanRSButton.Font = Enum.Font.SourceSansBold
+ScanRSButton.ZIndex = 11
 ScanRSButton.Parent = ButtonFrame
 
 local ScanRSCorner = Instance.new("UICorner")
-ScanRSCorner.CornerRadius = UDim.new(0, 6)
+ScanRSCorner.CornerRadius = UDim.new(0, 5)
 ScanRSCorner.Parent = ScanRSButton
 
 -- Scan Fish Data Button
 local ScanFishButton = Instance.new("TextButton")
-ScanFishButton.Size = UDim2.new(0.48, 0, 0, 35)
+ScanFishButton.Size = UDim2.new(0.48, 0, 0, 28)
 ScanFishButton.Position = UDim2.new(0.52, 0, 0, 0)
 ScanFishButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-ScanFishButton.Text = "🔍 Scan Fish Database"
+ScanFishButton.Text = "🔍 Scan Fish"
 ScanFishButton.TextColor3 = Color3.new(1, 1, 1)
-ScanFishButton.TextSize = 14
+ScanFishButton.TextSize = 12
 ScanFishButton.Font = Enum.Font.SourceSansBold
+ScanFishButton.ZIndex = 11
 ScanFishButton.Parent = ButtonFrame
 
 local ScanFishCorner = Instance.new("UICorner")
-ScanFishCorner.CornerRadius = UDim.new(0, 6)
+ScanFishCorner.CornerRadius = UDim.new(0, 5)
 ScanFishCorner.Parent = ScanFishButton
 
 -- Clear Button
 local ClearButton = Instance.new("TextButton")
-ClearButton.Size = UDim2.new(0.48, 0, 0, 35)
-ClearButton.Position = UDim2.new(0, 0, 0, 45)
+ClearButton.Size = UDim2.new(0.48, 0, 0, 28)
+ClearButton.Position = UDim2.new(0, 0, 0, 33)
 ClearButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
-ClearButton.Text = "🗑️ Clear Log"
+ClearButton.Text = "🗑️ Clear"
 ClearButton.TextColor3 = Color3.new(1, 1, 1)
-ClearButton.TextSize = 14
+ClearButton.TextSize = 12
 ClearButton.Font = Enum.Font.SourceSansBold
+ClearButton.ZIndex = 11
 ClearButton.Parent = ButtonFrame
 
 local ClearCorner = Instance.new("UICorner")
-ClearCorner.CornerRadius = UDim.new(0, 6)
+ClearCorner.CornerRadius = UDim.new(0, 5)
 ClearCorner.Parent = ClearButton
 
 -- Destroy Script Button
 local DestroyButton = Instance.new("TextButton")
-DestroyButton.Size = UDim2.new(0.48, 0, 0, 35)
-DestroyButton.Position = UDim2.new(0.52, 0, 0, 45)
+DestroyButton.Size = UDim2.new(0.48, 0, 0, 28)
+DestroyButton.Position = UDim2.new(0.52, 0, 0, 33)
 DestroyButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-DestroyButton.Text = "❌ Delete Script"
+DestroyButton.Text = "❌ Delete"
 DestroyButton.TextColor3 = Color3.new(1, 1, 1)
-DestroyButton.TextSize = 14
+DestroyButton.TextSize = 12
 DestroyButton.Font = Enum.Font.SourceSansBold
+DestroyButton.ZIndex = 11
 DestroyButton.Parent = ButtonFrame
 
 local DestroyCorner = Instance.new("UICorner")
-DestroyCorner.CornerRadius = UDim.new(0, 6)
+DestroyCorner.CornerRadius = UDim.new(0, 5)
 DestroyCorner.Parent = DestroyButton
 
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
