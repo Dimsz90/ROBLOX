@@ -1,525 +1,173 @@
---[[
-    ╔═══════════════════════════════════════════════╗
-    ║   Ultimate Performance Optimizer             ║
-    ║   - CPU Stabilizer (anti-jumping)            ║
-    ║   - Maximum Resource Optimization            ║
-    ║   - Hide Other Players                       ║
-    ╚═══════════════════════════════════════════════╝
-]]
+-- ROBLOX EXTREME CPU OPTIMIZER SCRIPT
+-- Script dengan opsi disable 3D render untuk CPU super rendah
 
-if _G.UltimateOptimizerRunning then
-    warn("⚠️ Optimizer sudah berjalan!")
-    return
-end
-_G.UltimateOptimizerRunning = true
-
--- Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local RS = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
-local Stats = game:GetService("Stats")
-local LocalPlayer = Players.LocalPlayer
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
--- Settings
-local CONFIG = {
-    hideOtherPlayers = true,
-    optimizeResources = true,
-    stabilizeCPU = true,
-    targetFPS = 60,
-    aggressiveMode = true  -- true = maximum optimization
-}
+-- KONFIGURASI
+local DISABLE_3D_RENDER = true 
+local FPS_CAP = 25 
 
-local optimizationStats = {
-    objectsDisabled = 0,
-    playersHidden = 0,
-    cpuStabilized = false,
-    memoryFreed = 0
-}
+-- Matikan rendering yang tidak perlu
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
 
--- ============================================
--- CPU STABILIZER (Anti-Jumping)
--- ============================================
-local function stabilizeCPU()
-    if not CONFIG.stabilizeCPU then return end
-    
-    print("⚙️ Stabilizing CPU...")
-    
-    -- 1. Limit physics updates
-    pcall(function()
-        settings().Physics.AllowSleep = true
-        settings().Physics.ThrottleAdjustTime = 0.1
-    end)
-    
-    -- 2. Reduce render distance
-    pcall(function()
-        if Workspace:FindFirstChild("StreamingEnabled") then
-            Workspace.StreamingEnabled = false
-        end
-    end)
-    
-    -- 3. Smooth frame pacing
-    local lastFrame = tick()
-    local targetFrameTime = 1 / CONFIG.targetFPS
-    
-    RunService.Heartbeat:Connect(function()
-        local currentTime = tick()
-        local deltaTime = currentTime - lastFrame
-        
-        -- If frame too fast, throttle
-        if deltaTime < targetFrameTime then
-            local waitTime = targetFrameTime - deltaTime
-            task.wait(waitTime)
-        end
-        
-        lastFrame = tick()
-    end)
-    
-    -- 4. Limit garbage collection spikes
-    pcall(function()
-        setfpscap(CONFIG.targetFPS)
-    end)
-    
-    optimizationStats.cpuStabilized = true
-    print("✅ CPU stabilized - Target FPS:", CONFIG.targetFPS)
-end
+-- Set FPS cap
+setfpscap(FPS_CAP)
 
--- ============================================
--- RESOURCE OPTIMIZATION (Maximum)
--- ============================================
-local function optimizeResources()
-    if not CONFIG.optimizeResources then return end
-    
-    print("🔧 Optimizing game resources...")
-    
-    local startMem = Stats:GetTotalMemoryUsageMb()
-    
-    -- 1. Graphics Settings (Lowest)
-    pcall(function()
-        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
-        settings().Rendering.EditQualityLevel = Enum.EditQualityLevel.Level01
-    end)
-    
-    -- 2. Lighting Optimization
-    pcall(function()
-        Lighting.GlobalShadows = false
-        Lighting.EnvironmentDiffuseScale = 0
-        Lighting.EnvironmentSpecularScale = 0
-        Lighting.Brightness = 1
-        Lighting.Technology = Enum.Technology.Compatibility
-    end)
-    
-    -- 3. Terrain Optimization
-    pcall(function()
-        local terrain = Workspace:FindFirstChildOfClass("Terrain")
-        if terrain then
-            terrain.WaterTransparency = 1
-            terrain.WaterWaveSize = 0
-            terrain.WaterWaveSpeed = 0
-            terrain.Decoration = false
-        end
-    end)
-    
-    -- 4. Disable Post Effects
-    pcall(function()
-        for _, effect in pairs(Lighting:GetChildren()) do
-            if effect:IsA("PostEffect") then
-                effect.Enabled = false
-                optimizationStats.objectsDisabled = optimizationStats.objectsDisabled + 1
-            end
-        end
-    end)
-    
-    -- 5. Disable Particles & Effects
-    local function disableEffects(parent)
-        for _, obj in pairs(parent:GetDescendants()) do
-            pcall(function()
-                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
-                    obj.Enabled = false
-                    optimizationStats.objectsDisabled = optimizationStats.objectsDisabled + 1
-                    
-                elseif obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
-                    obj.Enabled = false
-                    optimizationStats.objectsDisabled = optimizationStats.objectsDisabled + 1
-                    
-                elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-                    obj.Enabled = false
-                    optimizationStats.objectsDisabled = optimizationStats.objectsDisabled + 1
-                    
-                elseif obj:IsA("Sound") and obj.Playing then
-                    obj.Volume = 0
-                    optimizationStats.objectsDisabled = optimizationStats.objectsDisabled + 1
-                end
-            end)
+-- Nonaktifkan efek lighting
+pcall(function()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 100
+    Lighting.Brightness = 1
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or 
+           v:IsA("ColorCorrectionEffect") or v:IsA("SunRaysEffect") or v:IsA("DepthOfFieldEffect") then
+            v.Enabled = false
         end
     end
-    
-    disableEffects(Workspace)
-    
-    -- 6. Reduce Mesh Quality
-    if CONFIG.aggressiveMode then
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            pcall(function()
-                if obj:IsA("MeshPart") then
-                    obj.RenderFidelity = Enum.RenderFidelity.Performance
-                    obj.CastShadow = false
-                elseif obj:IsA("BasePart") then
-                    obj.CastShadow = false
-                end
-            end)
-        end
-    end
-    
-    -- 7. Force Garbage Collection
-    for i = 1, 3 do
-        collectgarbage("collect")
-        task.wait(0.1)
-    end
-    
-    local endMem = Stats:GetTotalMemoryUsageMb()
-    optimizationStats.memoryFreed = startMem - endMem
-    
-    print(string.format("✅ Resources optimized - Freed %.1f MB", optimizationStats.memoryFreed))
-end
+end)
 
--- ============================================
--- HIDE OTHER PLAYERS
--- ============================================
-local hiddenPlayers = {}
-local originalTransparencies = {}
-
-local function hidePlayer(player)
-    if player == LocalPlayer then return end
-    if hiddenPlayers[player.UserId] then return end
+-- DISABLE 3D RENDER
+if DISABLE_3D_RENDER then
+    -- Metode 1: Matikan semua render dengan RunService
+    local cam = Workspace.CurrentCamera
     
-    local character = player.Character
-    if not character then return end
+    -- Disconnect render step
+    RS:Set3dRenderingEnabled(false)
     
-    hiddenPlayers[player.UserId] = true
-    
-    for _, obj in pairs(character:GetDescendants()) do
+    -- Sembunyikan semua part di workspace
+    for _, obj in pairs(Workspace:GetDescendants()) do
         pcall(function()
             if obj:IsA("BasePart") then
-                if not originalTransparencies[obj] then
-                    originalTransparencies[obj] = obj.Transparency
-                end
                 obj.Transparency = 1
-                
+                obj.CastShadow = false
             elseif obj:IsA("Decal") or obj:IsA("Texture") then
-                if not originalTransparencies[obj] then
-                    originalTransparencies[obj] = obj.Transparency
-                end
                 obj.Transparency = 1
-                
-            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
+            elseif obj:IsA("ParticleEmitter") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
                 obj.Enabled = false
-                
-            elseif obj:IsA("PointLight") or obj:IsA("SpotLight") then
+            elseif obj:IsA("SurfaceGui") or obj:IsA("BillboardGui") then
                 obj.Enabled = false
             end
         end)
     end
     
-    optimizationStats.playersHidden = optimizationStats.playersHidden + 1
-end
-
-local function showPlayer(player)
-    if not hiddenPlayers[player.UserId] then return end
+    -- Buat layar hitam untuk menutupi render
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "CPUOptimizer"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
     
-    local character = player.Character
-    if not character then return end
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, 0, 1, 0)
+    Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+    Frame.BorderSizePixel = 0
+    Frame.Parent = ScreenGui
     
-    for _, obj in pairs(character:GetDescendants()) do
-        pcall(function()
-            if originalTransparencies[obj] then
-                obj.Transparency = originalTransparencies[obj]
-            end
-        end)
-    end
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.5, 0, 0.2, 0)
+    Label.Position = UDim2.new(0.25, 0, 0.4, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = "3D RENDER DISABLED\nCPU OPTIMIZER ACTIVE\n\nGame masih berjalan di background"
+    Label.TextColor3 = Color3.new(0, 1, 0)
+    Label.TextSize = 24
+    Label.Font = Enum.Font.SourceSansBold
+    Label.TextWrapped = true
+    Label.Parent = Frame
     
-    hiddenPlayers[player.UserId] = nil
-    optimizationStats.playersHidden = optimizationStats.playersHidden - 1
-end
-
-local function hideAllPlayers()
-    if not CONFIG.hideOtherPlayers then return end
+    ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     
-    print("👻 Hiding other players...")
+    print("✓ 3D Render DISABLED (Mode Ekstrem)")
     
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            hidePlayer(player)
-        end
-    end
+else
+    -- MODE OPTIMASI BIASA (dengan render)
     
-    -- Monitor new players
-    Players.PlayerAdded:Connect(function(player)
-        if CONFIG.hideOtherPlayers then
-            player.CharacterAdded:Connect(function(character)
-                task.wait(0.5)
-                hidePlayer(player)
-            end)
-            
-            if player.Character then
-                task.wait(0.5)
-                hidePlayer(player)
-            end
-        end
+    -- Optimasi terrain
+    pcall(function()
+        Workspace.Terrain.WaterReflectance = 0
+        Workspace.Terrain.WaterTransparency = 0
+        Workspace.Terrain.WaterWaveSize = 0
+        Workspace.Terrain.WaterWaveSpeed = 0
+        Workspace.Terrain.Decoration = false
     end)
     
-    -- Monitor character respawn
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            player.CharacterAdded:Connect(function(character)
-                if CONFIG.hideOtherPlayers then
-                    task.wait(0.5)
-                    hidePlayer(player)
+    -- Kurangi detail parts
+    local function optimizeParts()
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            pcall(function()
+                if obj:IsA("BasePart") then
+                    obj.Material = Enum.Material.SmoothPlastic
+                    obj.CastShadow = false
+                    obj.Reflectance = 0
+                elseif obj:IsA("Decal") or obj:IsA("Texture") then
+                    obj.Transparency = 0.5
+                elseif obj:IsA("ParticleEmitter") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
+                    obj.Enabled = false
                 end
             end)
         end
     end
     
-    print(string.format("✅ Hidden %d players", optimizationStats.playersHidden))
-end
-
--- ============================================
--- CONTINUOUS OPTIMIZATION
--- ============================================
-local function continuousOptimization()
-    task.spawn(function()
-        while task.wait(5) do
-            if CONFIG.optimizeResources then
-                -- Clean up new objects
-                local count = 0
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    pcall(function()
-                        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                            if obj.Enabled then
-                                obj.Enabled = false
-                                count = count + 1
-                            end
+    -- Nonaktifkan animasi pemain lain
+    local function disableOtherPlayersAnimations()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= Players.LocalPlayer then
+                pcall(function()
+                    local char = player.Character
+                    if char then
+                        for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
+                            track:Stop()
                         end
-                    end)
-                end
-                
-                if count > 0 then
-                    print(string.format("🔄 Cleaned %d new effects", count))
-                end
-                
-                -- Force GC every 30 seconds
-                collectgarbage("collect")
+                    end
+                end)
             end
         end
-    end)
-end
-
--- ============================================
--- PERFORMANCE MONITOR
--- ============================================
-local fpsHistory = {}
-local cpuSpikes = 0
-
-local function monitorPerformance()
-    local lastTime = tick()
-    local frameCount = 0
+    end
     
-    RunService.Heartbeat:Connect(function()
-        frameCount = frameCount + 1
+    -- Render hanya objek terdekat
+    local function renderDistance()
+        local char = Players.LocalPlayer.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
         
-        if tick() - lastTime >= 1 then
-            local currentFPS = frameCount
-            table.insert(fpsHistory, currentFPS)
-            
-            -- Keep only last 10 seconds
-            if #fpsHistory > 10 then
-                table.remove(fpsHistory, 1)
-            end
-            
-            -- Detect FPS drops (CPU spikes)
-            if #fpsHistory >= 2 then
-                local prevFPS = fpsHistory[#fpsHistory - 1]
-                local fpsDrop = prevFPS - currentFPS
-                
-                if fpsDrop > 15 then
-                    cpuSpikes = cpuSpikes + 1
-                    
-                    -- Auto-adjust on spike
-                    if CONFIG.aggressiveMode then
-                        collectgarbage("collect")
+        local pos = char.HumanoidRootPart.Position
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            pcall(function()
+                if obj:IsA("BasePart") and obj.Parent ~= char then
+                    local dist = (obj.Position - pos).Magnitude
+                    if dist > 100 then
+                        obj.Transparency = 1
+                        obj.CanCollide = false
+                    else
+                        if obj.Transparency == 1 then
+                            obj.Transparency = 0
+                            obj.CanCollide = true
+                        end
                     end
                 end
-            end
-            
-            frameCount = 0
-            lastTime = tick()
+            end)
+        end
+    end
+    
+    optimizeParts()
+    
+    spawn(function()
+        while wait(3) do
+            pcall(disableOtherPlayersAnimations)
         end
     end)
-end
-
--- ============================================
--- UI CONTROLS
--- ============================================
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "UltimateOptimizer"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-pcall(function()
-    screenGui.Parent = game:GetService("CoreGui")
-end)
-if not screenGui.Parent then
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- Compact Status Display
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 220, 0, 130)
-statusFrame.Position = UDim2.new(1, -230, 0, 10)
-statusFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-statusFrame.BorderSizePixel = 0
-statusFrame.Active = true
-statusFrame.Draggable = true
-statusFrame.Parent = screenGui
-
-local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 10)
-statusCorner.Parent = statusFrame
-
--- Header
-local header = Instance.new("TextLabel")
-header.Size = UDim2.new(1, 0, 0, 30)
-header.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-header.TextColor3 = Color3.fromRGB(255, 255, 255)
-header.Text = "⚡ Performance"
-header.Font = Enum.Font.GothamBold
-header.TextSize = 14
-header.BorderSizePixel = 0
-header.Parent = statusFrame
-
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 10)
-headerCorner.Parent = header
-
--- Stats Display
-local statsLabel = Instance.new("TextLabel")
-statsLabel.Size = UDim2.new(1, -16, 1, -38)
-statsLabel.Position = UDim2.new(0, 8, 0, 34)
-statsLabel.BackgroundTransparency = 1
-statsLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
-statsLabel.Font = Enum.Font.Code
-statsLabel.TextSize = 11
-statsLabel.TextXAlignment = Enum.TextXAlignment.Left
-statsLabel.TextYAlignment = Enum.TextYAlignment.Top
-statsLabel.Text = "Initializing..."
-statsLabel.Parent = statusFrame
-
--- Update stats display
-task.spawn(function()
-    while task.wait(0.5) do
-        local fps = #fpsHistory > 0 and fpsHistory[#fpsHistory] or 0
-        local memory = math.floor(Stats:GetTotalMemoryUsageMb())
-        local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
-        
-        local fpsColor = fps >= 50 and "🟢" or (fps >= 30 and "🟡" or "🔴")
-        
-        statsLabel.Text = string.format([[
-%s FPS: %d
-💾 Memory: %d MB
-📡 Ping: %d ms
-
-🎯 Objects: %d
-👻 Players: %d
-⚠️ CPU Spikes: %d
-
-Status: Active ✅
-]], fpsColor, fps, memory, ping, optimizationStats.objectsDisabled, optimizationStats.playersHidden, cpuSpikes)
-    end
-end)
-
--- Toggle button
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 30, 0, 30)
-toggleBtn.Position = UDim2.new(1, -35, 0, 0)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Text = "—"
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 18
-toggleBtn.BorderSizePixel = 0
-toggleBtn.Parent = header
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 6)
-toggleCorner.Parent = toggleBtn
-
-local minimized = false
-toggleBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
     
-    if minimized then
-        statusFrame.Size = UDim2.new(0, 220, 0, 30)
-        statsLabel.Visible = false
-        toggleBtn.Text = "+"
-    else
-        statusFrame.Size = UDim2.new(0, 220, 0, 130)
-        statsLabel.Visible = true
-        toggleBtn.Text = "—"
-    end
-end)
-
--- ============================================
--- MAIN EXECUTION
--- ============================================
-print("════════════════════════════════")
-print("⚡ ULTIMATE PERFORMANCE OPTIMIZER")
-print("════════════════════════════════")
-
--- Apply all optimizations
-stabilizeCPU()
-task.wait(0.2)
-
-optimizeResources()
-task.wait(0.2)
-
-hideAllPlayers()
-task.wait(0.2)
-
-continuousOptimization()
-monitorPerformance()
-
-print("════════════════════════════════")
-print("✅ ALL OPTIMIZATIONS ACTIVE")
-print(string.format("📊 Objects disabled: %d", optimizationStats.objectsDisabled))
-print(string.format("👻 Players hidden: %d", optimizationStats.playersHidden))
-print(string.format("💾 Memory freed: %.1f MB", optimizationStats.memoryFreed))
-print("════════════════════════════════")
-print("🎮 Game performance maximized!")
-print("📊 Check top-right UI for live stats")
-
--- Notification
-pcall(function()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "⚡ Optimizer Active",
-        Text = string.format("FPS stabilized | %d players hidden", optimizationStats.playersHidden),
-        Duration = 5
-    })
-end)
-
--- Expose controls
-_G.OptimizerConfig = CONFIG
-_G.ShowAllPlayers = function()
-    CONFIG.hideOtherPlayers = false
-    for userId, _ in pairs(hiddenPlayers) do
-        local player = Players:GetPlayerByUserId(userId)
-        if player then showPlayer(player) end
-    end
-end
-_G.HideAllPlayers = function()
-    CONFIG.hideOtherPlayers = true
-    hideAllPlayers()
+    spawn(function()
+        while wait(2) do
+            pcall(renderDistance)
+        end
+    end)
+    
+    print("✓ Optimasi Normal Mode aktif")
 end
 
-print("💡 Commands:")
-print("  _G.ShowAllPlayers() - Show hidden players")
-print("  _G.HideAllPlayers() - Hide players again")
+print("✓ CPU Optimizer aktif!")
+print("✓ FPS cap: " .. FPS_CAP)
+print("✓ Quality: Minimum")
+print("✓ 3D Render: " .. (DISABLE_3D_RENDER and "DISABLED" or "ENABLED"))
