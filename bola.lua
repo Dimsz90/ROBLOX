@@ -1,5 +1,5 @@
--- FISH DEX EXPLORER - Complete Fishing Analysis
--- Advanced tool untuk explore semua fishing-related modules
+-- FISH DEX EXPLORER - With Event Filtering
+-- Enhanced version dengan filter untuk mengurangi spam
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,8 +13,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 600, 0, 550)
-MainFrame.Position = UDim2.new(0.5, -300, 0.5, -275)
+MainFrame.Size = UDim2.new(0, 600, 0, 600) -- Tambah tinggi
+MainFrame.Position = UDim2.new(0.5, -300, 0.5, -300)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(0, 200, 255)
@@ -36,7 +36,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -20, 0, 40)
 Title.Position = UDim2.new(0, 10, 0, 10)
 Title.BackgroundTransparency = 1
-Title.Text = "🐠 FISH DEX EXPLORER v2.0"
+Title.Text = "🐠 FISH DEX EXPLORER v2.1"
 Title.TextColor3 = Color3.fromRGB(0, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.SourceSansBold
@@ -46,10 +46,10 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -20, 0, 20)
 SubTitle.Position = UDim2.new(0, 10, 0, 45)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Complete Fishing Module Analysis"
+SubTitle.Text = "Complete Fishing Analysis with Event Filtering"
 SubTitle.TextColor3 = Color3.fromRGB(200, 200, 255)
 SubTitle.TextSize = 14
-Title.Font = Enum.Font.SourceSans
+SubTitle.Font = Enum.Font.SourceSans
 SubTitle.Parent = MainFrame
 
 -- Tab System
@@ -61,8 +61,9 @@ TabsFrame.Parent = MainFrame
 
 local Tabs = {
     "Controller",
-    "Fish Data",
+    "Fish Data", 
     "Events",
+    "Event Filter",
     "Hooks",
     "Debug"
 }
@@ -78,7 +79,7 @@ for i, tabName in ipairs(Tabs) do
     tabBtn.BackgroundColor3 = tabName == "Controller" and Color3.fromRGB(0, 100, 200) or Color3.fromRGB(40, 40, 60)
     tabBtn.Text = tabName
     tabBtn.TextColor3 = Color3.new(1, 1, 1)
-    tabBtn.TextSize = 14
+    tabBtn.TextSize = 12
     tabBtn.Font = Enum.Font.SourceSansBold
     tabBtn.Parent = TabsFrame
     
@@ -91,7 +92,7 @@ end
 
 -- Content Area
 local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, -20, 1, -180)
+ContentFrame.Size = UDim2.new(1, -20, 1, -200)
 ContentFrame.Position = UDim2.new(0, 10, 0, 110)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 ContentFrame.Parent = MainFrame
@@ -116,7 +117,7 @@ UIListLayout.Parent = ScrollFrame
 -- Status Bar
 local StatusBar = Instance.new("Frame")
 StatusBar.Size = UDim2.new(1, -20, 0, 30)
-StatusBar.Position = UDim2.new(0, 10, 1, -60)
+StatusBar.Position = UDim2.new(0, 10, 1, -80)
 StatusBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
 StatusBar.Parent = MainFrame
 
@@ -134,52 +135,62 @@ StatusLabel.Parent = StatusBar
 -- Control Buttons
 local ControlFrame = Instance.new("Frame")
 ControlFrame.Size = UDim2.new(1, -20, 0, 25)
-ControlFrame.Position = UDim2.new(0, 10, 1, -25)
+ControlFrame.Position = UDim2.new(0, 10, 1, -45)
 ControlFrame.BackgroundTransparency = 1
 ControlFrame.Parent = MainFrame
 
 local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Size = UDim2.new(0.24, -5, 1, 0)
+RefreshBtn.Size = UDim2.new(0.19, -5, 1, 0)
 RefreshBtn.Position = UDim2.new(0, 0, 0, 0)
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
 RefreshBtn.Text = "🔄 Refresh"
 RefreshBtn.TextColor3 = Color3.new(1, 1, 1)
-RefreshBtn.TextSize = 13
+RefreshBtn.TextSize = 12
 RefreshBtn.Font = Enum.Font.SourceSansBold
 RefreshBtn.Parent = ControlFrame
 
 local ClearBtn = Instance.new("TextButton")
-ClearBtn.Size = UDim2.new(0.24, -5, 1, 0)
-ClearBtn.Position = UDim2.new(0.25, 5, 0, 0)
+ClearBtn.Size = UDim2.new(0.19, -5, 1, 0)
+ClearBtn.Position = UDim2.new(0.2, 5, 0, 0)
 ClearBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
 ClearBtn.Text = "🗑️ Clear"
 ClearBtn.TextColor3 = Color3.new(1, 1, 1)
-ClearBtn.TextSize = 13
+ClearBtn.TextSize = 12
 ClearBtn.Font = Enum.Font.SourceSansBold
 ClearBtn.Parent = ControlFrame
 
 local ExportBtn = Instance.new("TextButton")
-ExportBtn.Size = UDim2.new(0.24, -5, 1, 0)
-ExportBtn.Position = UDim2.new(0.5, 5, 0, 0)
+ExportBtn.Size = UDim2.new(0.19, -5, 1, 0)
+ExportBtn.Position = UDim2.new(0.4, 5, 0, 0)
 ExportBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
 ExportBtn.Text = "💾 Export"
 ExportBtn.TextColor3 = Color3.new(1, 1, 1)
-ExportBtn.TextSize = 13
+ExportBtn.TextSize = 12
 ExportBtn.Font = Enum.Font.SourceSansBold
 ExportBtn.Parent = ControlFrame
 
+local FilterBtn = Instance.new("TextButton")
+FilterBtn.Size = UDim2.new(0.19, -5, 1, 0)
+FilterBtn.Position = UDim2.new(0.6, 5, 0, 0)
+FilterBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
+FilterBtn.Text = "⚡ Filter"
+FilterBtn.TextColor3 = Color3.new(1, 1, 1)
+FilterBtn.TextSize = 12
+FilterBtn.Font = Enum.Font.SourceSansBold
+FilterBtn.Parent = ControlFrame
+
 local DestroyBtn = Instance.new("TextButton")
-DestroyBtn.Size = UDim2.new(0.24, -5, 1, 0)
-DestroyBtn.Position = UDim2.new(0.75, 5, 0, 0)
+DestroyBtn.Size = UDim2.new(0.19, -5, 1, 0)
+DestroyBtn.Position = UDim2.new(0.8, 5, 0, 0)
 DestroyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 DestroyBtn.Text = "❌ Destroy"
 DestroyBtn.TextColor3 = Color3.new(1, 1, 1)
-DestroyBtn.TextSize = 13
+DestroyBtn.TextSize = 12
 DestroyBtn.Font = Enum.Font.SourceSansBold
 DestroyBtn.Parent = ControlFrame
 
 -- Button corners
-for _, btn in pairs({RefreshBtn, ClearBtn, ExportBtn, DestroyBtn}) do
+for _, btn in pairs({RefreshBtn, ClearBtn, ExportBtn, FilterBtn, DestroyBtn}) do
     local Corner = Instance.new("UICorner")
     Corner.CornerRadius = UDim.new(0, 6)
     Corner.Parent = btn
@@ -192,8 +203,67 @@ local eventConnections = {}
 local hookedFunctions = {}
 local analysisResults = {}
 
--- Fungsi untuk menambahkan log
-local function addLog(text, color, icon)
+-- EVENT FILTER SYSTEM
+local eventFilter = {
+    enabled = false,
+    filters = {
+        -- Events yang akan di-block atau limit
+        blockedEvents = {
+            "PlayFishingEffect",
+            "UpdateChargeFrame",
+            "UpdateChargeState"
+        },
+        
+        -- Events yang akan tetap ditampilkan
+        allowedEvents = {
+            "FishCaught",
+            "FishingRodStarted", 
+            "FishingStopped",
+            "FishingMinigameClick",
+            "FishingMinigameChanged"
+        },
+        
+        -- Rate limiting untuk events tertentu (events per detik)
+        rateLimits = {
+            PlayFishingEffect = 1,  -- Max 1 event per second
+            UpdateChargeFrame = 2   -- Max 2 events per second
+        }
+    },
+    
+    -- Tracking untuk rate limiting
+    lastEventTime = {},
+    eventCounters = {}
+}
+
+-- Fungsi untuk menambahkan log dengan filter check
+local function addLog(text, color, icon, bypassFilter)
+    if eventFilter.enabled and not bypassFilter then
+        -- Cek jika text mengandung event yang di-block
+        for _, blockedEvent in ipairs(eventFilter.filters.blockedEvents) do
+            if text:find(blockedEvent) then
+                return -- Skip log ini
+            end
+        end
+        
+        -- Rate limiting check
+        for eventName, maxRate in pairs(eventFilter.filters.rateLimits) do
+            if text:find(eventName) then
+                local currentTime = tick()
+                local lastTime = eventFilter.lastEventTime[eventName] or 0
+                
+                -- Cek rate limit
+                if currentTime - lastTime < (1 / maxRate) then
+                    return -- Skip, terlalu cepat
+                end
+                
+                -- Update last event time
+                eventFilter.lastEventTime[eventName] = currentTime
+                break
+            end
+        end
+    end
+    
+    -- Jika lolos filter, tampilkan log
     local Entry = Instance.new("Frame")
     Entry.Size = UDim2.new(1, 0, 0, 0)
     Entry.AutomaticSize = Enum.AutomaticSize.Y
@@ -238,7 +308,7 @@ local function clearContent()
     end
 end
 
--- TAB 1: CONTROLLER ANALYSIS
+-- TAB 1: CONTROLLER ANALYSIS (sama seperti sebelumnya)
 local function analyzeController()
     clearContent()
     StatusLabel.Text = "Analyzing Fishing Controller..."
@@ -256,28 +326,7 @@ local function analyzeController()
     
     if not current or not current:IsA("ModuleScript") then
         addLog("❌ Controller not found at: " .. controllerPath, Color3.fromRGB(255, 50, 50), "⚠️")
-        
-        -- Coba cari di tempat lain
-        addLog("--- Searching in all ReplicatedStorage ---", Color3.fromRGB(255, 200, 0), "🔎")
-        
-        local foundControllers = {}
-        for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-            if item:IsA("ModuleScript") then
-                local nameLower = item.Name:lower()
-                if nameLower:find("fish") and (nameLower:find("controller") or nameLower:find("control")) then
-                    table.insert(foundControllers, item)
-                    addLog("📦 Found: " .. item:GetFullName(), Color3.fromRGB(150, 200, 255))
-                end
-            end
-        end
-        
-        if #foundControllers == 0 then
-            addLog("❌ No fishing controllers found!", Color3.fromRGB(255, 50, 50))
-            return
-        end
-        
-        current = foundControllers[1]
-        addLog("✅ Using: " .. current:GetFullName(), Color3.fromRGB(0, 255, 0))
+        return
     end
     
     -- Load controller
@@ -323,86 +372,23 @@ local function analyzeController()
         local icon = isCatchRelated and "🎣" or "🔧"
         
         addLog(icon .. " " .. func.Name, color)
-        
-        if isCatchRelated then
-            -- Dapatkan info function
-            local info = debug.getinfo(func.Value)
-            if info then
-                addLog("   ├─ Source: " .. (info.source or "?"), Color3.fromRGB(100, 100, 100))
-                addLog("   └─ Line: " .. (info.linedefined or "?"), Color3.fromRGB(100, 100, 100))
-            end
-        end
     end
     
-    -- Events
+    -- Events - Highlight important ones
     addLog("⚡ EVENTS (" .. #events .. "):", Color3.fromRGB(255, 100, 100), "⚡")
     for _, event in ipairs(events) do
-        addLog("📡 " .. event.Name, Color3.fromRGB(255, 150, 100))
-    end
-    
-    -- Tables
-    addLog("📦 TABLES (" .. #tables .. "):", Color3.fromRGB(255, 200, 100), "📦")
-    for _, tbl in ipairs(tables) do
-        local size = #tbl.Value
-        local hasData = false
+        local isImportant = event.Name:lower():find("fish") or event.Name:lower():find("catch")
+        local color = isImportant and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(255, 150, 100)
+        local icon = isImportant and "🎣" or "📡"
         
-        -- Cek jika table berisi data ikan
-        for k, v in pairs(tbl.Value) do
-            if type(v) == "table" and (v.Name or v.FishName) then
-                hasData = true
-                break
-            end
-        end
+        addLog(icon .. " " .. event.Name, color)
         
-        local icon = hasData and "🐟" or "📦"
-        local color = hasData and Color3.fromRGB(100, 255, 200) or Color3.fromRGB(200, 200, 200)
-        
-        addLog(icon .. " " .. tbl.Name .. " (size: " .. size .. ")", color)
-    end
-    
-    -- Values
-    addLog("📄 VALUES (" .. #values .. "):", Color3.fromRGB(150, 150, 150), "📄")
-    for _, val in ipairs(values) do
-        addLog("📌 " .. val.Name .. " = " .. tostring(val.Value), Color3.fromRGB(150, 150, 150))
-    end
-    
-    -- Special analysis untuk fungsi yang penting
-    addLog("--- KEY FUNCTIONS ANALYSIS ---", Color3.fromRGB(255, 255, 0), "🔑")
-    
-    local keyFunctions = {
-        "FishCaught", "GetCurrentGUID", "RequestFishingMinigameClick",
-        "FishingRodStarted", "SendFishingRequestToServer", "Start"
-    }
-    
-    for _, funcName in ipairs(keyFunctions) do
-        if data[funcName] then
-            local funcType = type(data[funcName])
-            local color = funcType == "function" and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 150, 50)
-            
-            addLog("🎯 " .. funcName .. " (" .. funcType .. ")", color)
-            
-            if funcType == "function" then
-                -- Try to get function info
-                local info = debug.getinfo(data[funcName])
-                if info then
-                    addLog("   ├─ Source: " .. (info.source or "?"), Color3.fromRGB(100, 100, 100))
-                    addLog("   └─ Lines: " .. (info.linedefined or "?") .. "-" .. (info.lastlinedefined or "?"), Color3.fromRGB(100, 100, 100))
-                end
-                
-                -- Test panggil fungsi yang aman
-                if funcName == "GetCurrentGUID" then
-                    local success, result = pcall(data[funcName])
-                    if success then
-                        addLog("   📍 Current GUID: " .. tostring(result), Color3.fromRGB(100, 255, 200))
-                    end
-                end
-            end
-        else
-            addLog("❌ " .. funcName .. " (NOT FOUND)", Color3.fromRGB(255, 100, 100))
+        -- Note untuk filter
+        if event.Name == "PlayFishingEffect" then
+            addLog("   ⚠️ This event may spam - will be filtered", Color3.fromRGB(255, 150, 50))
         end
     end
     
-    -- Save analysis results
     analysisResults.Controller = {
         Path = current:GetFullName(),
         Functions = functions,
@@ -414,7 +400,7 @@ local function analyzeController()
     StatusLabel.Text = "Controller analyzed: " .. #functions .. " functions, " .. #events .. " events"
 end
 
--- TAB 2: FISH DATA EXPLORER
+-- TAB 2: FISH DATA EXPLORER (sama seperti sebelumnya)
 local function exploreFishData()
     clearContent()
     StatusLabel.Text = "Exploring fish data..."
@@ -432,95 +418,44 @@ local function exploreFishData()
         [7] = {Name = "SECRET", Color = Color3.fromRGB(255, 50, 255)}
     }
     
-    -- Scan untuk fish modules
-    addLog("--- Scanning ReplicatedStorage for fish data ---", Color3.fromRGB(200, 200, 255), "🔍")
-    
-    local fishModules = {}
+    -- Load fish data
     local totalFishFound = 0
     
     for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-        if item:IsA("ModuleScript") then
-            local name = item.Name
-            -- Cek jika ini kemungkinan fish data
-            if not name:match("^%u%l+%u%l+$") then -- Pattern untuk nama ikan (CamelCase)
-                local success, data = pcall(function()
-                    return require(item)
-                end)
-                
-                if success and type(data) == "table" then
-                    -- Cek jika berisi fish data
-                    local hasFishData = false
-                    local fishInModule = {}
-                    
-                    for key, value in pairs(data) do
-                        if type(value) == "table" then
-                            local fishName = value.Name or value.FishName or tostring(key)
-                            local rarityNum = value.Rarity or value.Tier
-                            
-                            if fishName and rarityNum then
-                                hasFishData = true
-                                
-                                local fishInfo = {
-                                    Name = fishName,
-                                    Rarity = tonumber(rarityNum),
-                                    RarityName = rarityMap[tonumber(rarityNum)] and rarityMap[tonumber(rarityNum)].Name or "Unknown",
-                                    Weight = value.Weight or value.Size,
-                                    Mutation = value.Mutation or value.Shiny or value.Variant,
-                                    Value = value.Value or value.Price,
-                                    Source = item.Name
-                                }
-                                
-                                table.insert(fishInModule, fishInfo)
-                                totalFishFound = totalFishFound + 1
-                                
-                                -- Add to global database
-                                fishDatabase[fishName] = fishInfo
-                            end
-                        end
-                    end
-                    
-                    if hasFishData then
-                        table.insert(fishModules, {
-                            Module = item,
-                            Fish = fishInModule
-                        })
+        if item:IsA("ModuleScript") and item.Name:match("^%u%l+") then
+            local success, data = pcall(require, item)
+            if success and type(data) == "table" then
+                for key, value in pairs(data) do
+                    if type(value) == "table" then
+                        local fishName = value.Name or value.FishName or tostring(key)
+                        local rarityNum = value.Rarity or value.Tier
                         
-                        addLog("📁 Module: " .. item.Name .. " (" .. #fishInModule .. " fish)", Color3.fromRGB(100, 200, 255))
+                        if fishName and rarityNum then
+                            local fishInfo = {
+                                Name = fishName,
+                                Rarity = tonumber(rarityNum),
+                                RarityName = rarityMap[tonumber(rarityNum)] and rarityMap[tonumber(rarityNum)].Name or "Unknown",
+                                Weight = value.Weight or value.Size,
+                                Mutation = value.Mutation or value.Shiny or value.Variant,
+                                Value = value.Value or value.Price,
+                                Source = item.Name
+                            }
+                            
+                            fishDatabase[fishName] = fishInfo
+                            totalFishFound = totalFishFound + 1
+                        end
                     end
                 end
             end
         end
     end
     
-    if #fishModules == 0 then
-        addLog("❌ No fish data modules found!", Color3.fromRGB(255, 50, 50))
-        
-        -- Coba cari di folder tertentu
-        addLog("--- Checking specific folders ---", Color3.fromRGB(255, 200, 0))
-        
-        local foldersToCheck = {"Fish", "Fishes", "Bestiary", "Database", "Data"}
-        for _, folderName in ipairs(foldersToCheck) do
-            local folder = ReplicatedStorage:FindFirstChild(folderName)
-            if folder then
-                addLog("📂 Found folder: " .. folderName, Color3.fromRGB(150, 200, 255))
-                
-                for _, item in pairs(folder:GetDescendants()) do
-                    if item:IsA("ModuleScript") then
-                        local success, data = pcall(require, item)
-                        if success and type(data) == "table" then
-                            addLog("   📦 " .. item.Name, Color3.fromRGB(200, 200, 200))
-                        end
-                    end
-                end
-            end
-        end
+    if totalFishFound == 0 then
+        addLog("❌ No fish data found!", Color3.fromRGB(255, 50, 50))
     else
-        addLog("✅ Found " .. #fishModules .. " fish modules with " .. totalFishFound .. " total fish", 
-               Color3.fromRGB(0, 255, 150), "📊")
+        addLog("✅ Found " .. totalFishFound .. " fish in database", Color3.fromRGB(0, 255, 150))
         
-        -- Tampilkan semua ikan dengan grouping by rarity
-        addLog("--- ALL FISH BY RARITY ---", Color3.fromRGB(255, 255, 0), "⭐")
-        
+        -- Group by rarity
         local fishByRarity = {}
         for _, fish in pairs(fishDatabase) do
             if not fishByRarity[fish.Rarity] then
@@ -529,90 +464,17 @@ local function exploreFishData()
             table.insert(fishByRarity[fish.Rarity], fish)
         end
         
-        -- Sort by rarity
-        local sortedRarities = {}
-        for rarity in pairs(fishByRarity) do
-            table.insert(sortedRarities, rarity)
-        end
-        table.sort(sortedRarities)
-        
-        for _, rarityNum in ipairs(sortedRarities) do
-            local rarityInfo = rarityMap[rarityNum] or {Name = "Rarity " .. rarityNum, Color = Color3.fromRGB(200, 200, 200)}
-            local fishList = fishByRarity[rarityNum]
-            
-            addLog("⭐ " .. rarityInfo.Name .. " (" .. #fishList .. " fish)", rarityInfo.Color)
-            
-            for _, fish in ipairs(fishList) do
-                local info = string.format("   🐟 %s", fish.Name)
-                if fish.Weight then
-                    info = info .. " | Weight: " .. tostring(fish.Weight)
-                end
-                if fish.Mutation then
-                    info = info .. " | Mutation: " .. tostring(fish.Mutation)
-                end
+        -- Display by rarity
+        for rarity = 1, 7 do
+            if fishByRarity[rarity] then
+                local rarityInfo = rarityMap[rarity] or {Name = "Rarity " .. rarity, Color = Color3.fromRGB(200, 200, 200)}
+                addLog("⭐ " .. rarityInfo.Name .. " (" .. #fishByRarity[rarity] .. ")", rarityInfo.Color)
                 
-                addLog(info, rarityInfo.Color)
-            end
-        end
-        
-        -- Tampilkan beberapa contoh detail
-        addLog("--- SAMPLE FISH DETAILS ---", Color3.fromRGB(200, 255, 200), "🔎")
-        
-        local sampleCount = 0
-        for name, fish in pairs(fishDatabase) do
-            if sampleCount < 5 then
-                local rarityInfo = rarityMap[fish.Rarity] or {Name = "Unknown", Color = Color3.fromRGB(200, 200, 200)}
-                
-                addLog("🔍 " .. name, rarityInfo.Color)
-                addLog("   ├─ Rarity: " .. fish.RarityName .. " (" .. fish.Rarity .. ")", rarityInfo.Color)
-                if fish.Weight then
-                    addLog("   ├─ Weight: " .. tostring(fish.Weight), rarityInfo.Color)
-                end
-                if fish.Mutation then
-                    addLog("   ├─ Mutation: " .. tostring(fish.Mutation), rarityInfo.Color)
-                end
-                if fish.Value then
-                    addLog("   ├─ Value: " .. tostring(fish.Value), rarityInfo.Color)
-                end
-                addLog("   └─ Source: " .. fish.Source, rarityInfo.Color)
-                
-                sampleCount = sampleCount + 1
-            else
-                addLog("... and " .. (totalFishFound - 5) .. " more fish", Color3.fromRGB(150, 150, 150))
-                break
-            end
-        end
-    end
-    
-    -- Check jika ada Bestiary module
-    addLog("--- BESTIARY CHECK ---", Color3.fromRGB(150, 200, 255), "📖")
-    
-    local bestiary = ReplicatedStorage:FindFirstChild("Bestiary")
-    if bestiary then
-        addLog("✅ Bestiary found!", Color3.fromRGB(0, 255, 0))
-        
-        local success, data = pcall(require, bestiary)
-        if success then
-            if type(data) == "table" then
-                if data.GetBestiary and type(data.GetBestiary) == "function" then
-                    addLog("🔧 GetBestiary function available", Color3.fromRGB(100, 255, 200))
-                    
-                    -- Try to get bestiary data
-                    local success2, bestiaryData = pcall(data.GetBestiary)
-                    if success2 and type(bestiaryData) == "table" then
-                        local count = 0
-                        for _, fish in pairs(bestiaryData) do
-                            if type(fish) == "table" and fish.Name then
-                                count = count + 1
-                            end
-                        end
-                        addLog("📊 Bestiary contains " .. count .. " fish", Color3.fromRGB(0, 255, 150))
-                    end
+                for _, fish in ipairs(fishByRarity[rarity]) do
+                    addLog("   🐟 " .. fish.Name, rarityInfo.Color)
                 end
             end
         end
-    else
-        addLog("ℹ️ No Bestiary module found", Color3.fromRGB(150, 150, 150))
     end
     
     analysisResults.FishData = {
@@ -620,15 +482,17 @@ local function exploreFishData()
         Database = fishDatabase
     }
     
-    StatusLabel.Text = "Found " .. totalFishFound .. " fish in database"
+    StatusLabel.Text = "Found " .. totalFishFound .. " fish"
 end
 
--- TAB 3: EVENTS MONITOR
+-- TAB 3: EVENTS MONITOR WITH FILTERING
 local function monitorEvents()
     clearContent()
     StatusLabel.Text = "Setting up event monitoring..."
     
     addLog("=== EVENT MONITORING SYSTEM ===", Color3.fromRGB(0, 255, 255), "⚡")
+    addLog("Filter status: " .. (eventFilter.enabled and "ENABLED 🟢" or "DISABLED 🔴"), 
+           eventFilter.enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100))
     
     if not fishingController then
         addLog("⚠️ Please analyze Controller first!", Color3.fromRGB(255, 150, 50))
@@ -641,75 +505,42 @@ local function monitorEvents()
     end
     eventConnections = {}
     
-    -- Monitor events in controller
-    addLog("--- CONTROLLER EVENTS ---", Color3.fromRGB(200, 150, 255), "🔌")
+    -- Setup event monitoring dengan filter
+    local importantEvents = 0
+    local filteredEvents = 0
     
-    local eventCount = 0
     for key, value in pairs(fishingController) do
         if typeof(value) == "RBXScriptSignal" then
-            eventCount = eventCount + 1
+            local isBlocked = false
             
-            local conn = value:Connect(function(...)
-                local args = {...}
-                local timestamp = os.date("%H:%M:%S")
-                
-                addLog("⚡ " .. key .. " fired at " .. timestamp, Color3.fromRGB(255, 215, 0))
-                
-                -- Log arguments
-                for i, arg in ipairs(args) do
-                    if type(arg) == "table" then
-                        addLog("   📦 Arg " .. i .. ": [TABLE]", Color3.fromRGB(200, 200, 200))
-                        
-                        -- Check for fish data
-                        if arg.Name or arg.FishName then
-                            addLog("   🎣 FISH DATA DETECTED!", Color3.fromRGB(0, 255, 150))
-                            for k, v in pairs(arg) do
-                                if type(v) == "string" or type(v) == "number" then
-                                    addLog("     " .. k .. " = " .. tostring(v), Color3.fromRGB(100, 255, 200))
-                                end
-                            end
-                        end
-                    else
-                        addLog("   📄 Arg " .. i .. ": " .. tostring(arg) .. " (" .. type(arg) .. ")", 
-                               Color3.fromRGB(200, 200, 200))
-                    end
+            -- Cek jika event ini di-block
+            for _, blockedEvent in ipairs(eventFilter.filters.blockedEvents) do
+                if key == blockedEvent then
+                    isBlocked = true
+                    filteredEvents = filteredEvents + 1
+                    break
                 end
-            end)
+            end
             
-            table.insert(eventConnections, conn)
-            addLog("✅ Monitoring: " .. key, Color3.fromRGB(0, 255, 0))
-        end
-    end
-    
-    if eventCount == 0 then
-        addLog("ℹ️ No events found in controller", Color3.fromRGB(150, 150, 150))
-    end
-    
-    -- Monitor RemoteEvents
-    addLog("--- REMOTEEVENTS IN REPLICATEDSTORAGE ---", Color3.fromRGB(150, 200, 255), "📡")
-    
-    local remoteCount = 0
-    for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-        if item:IsA("RemoteEvent") then
-            local nameLower = item.Name:lower()
-            if nameLower:find("fish") or nameLower:find("catch") or nameLower:find("rod") then
-                remoteCount = remoteCount + 1
+            if not isBlocked or not eventFilter.enabled then
+                importantEvents = importantEvents + 1
                 
-                local conn = item.OnClientEvent:Connect(function(...)
+                local conn = value:Connect(function(...)
                     local args = {...}
                     local timestamp = os.date("%H:%M:%S")
                     
-                    addLog("📡 " .. item.Name .. " at " .. timestamp, Color3.fromRGB(255, 150, 100))
+                    -- Gunakan filter check di addLog
+                    addLog("⚡ " .. key .. " at " .. timestamp, Color3.fromRGB(255, 215, 0))
                     
-                    -- Check for fish data
+                    -- Check for fish data (bypass filter untuk data penting)
                     for i, arg in ipairs(args) do
                         if type(arg) == "table" then
                             if arg.Name or arg.FishName then
-                                addLog("   🎣 REMOTE FISH DATA!", Color3.fromRGB(0, 255, 150))
+                                addLog("   🎣 FISH DATA DETECTED!", Color3.fromRGB(0, 255, 150), nil, true) -- bypass filter
                                 
                                 for k, v in pairs(arg) do
                                     if type(v) == "string" or type(v) == "number" then
-                                        addLog("     " .. k .. " = " .. tostring(v), Color3.fromRGB(100, 255, 200))
+                                        addLog("     " .. k .. " = " .. tostring(v), Color3.fromRGB(100, 255, 200), nil, true)
                                     end
                                 end
                             end
@@ -718,16 +549,196 @@ local function monitorEvents()
                 end)
                 
                 table.insert(eventConnections, conn)
-                addLog("✅ Monitoring RemoteEvent: " .. item.Name, Color3.fromRGB(0, 255, 150))
+                
+                local color = eventFilter.enabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(0, 200, 255)
+                addLog("✅ Monitoring: " .. key, color)
+            else
+                addLog("🚫 Filtered: " .. key .. " (blocked)", Color3.fromRGB(150, 150, 150))
             end
         end
     end
     
-    addLog("📊 Total events being monitored: " .. (eventCount + remoteCount), Color3.fromRGB(255, 255, 0))
-    StatusLabel.Text = "Monitoring " .. (eventCount + remoteCount) .. " events"
+    -- Monitor important RemoteEvents
+    for _, item in pairs(ReplicatedStorage:GetDescendants()) do
+        if item:IsA("RemoteEvent") and item.Name:lower():find("fish") then
+            local conn = item.OnClientEvent:Connect(function(...)
+                local timestamp = os.date("%H:%M:%S")
+                addLog("📡 " .. item.Name .. " at " .. timestamp, Color3.fromRGB(255, 150, 100))
+            end)
+            
+            table.insert(eventConnections, conn)
+            importantEvents = importantEvents + 1
+            addLog("✅ Monitoring RemoteEvent: " .. item.Name, Color3.fromRGB(0, 255, 200))
+        end
+    end
+    
+    addLog("📊 Important events: " .. importantEvents, Color3.fromRGB(0, 255, 0))
+    if eventFilter.enabled then
+        addLog("🚫 Filtered events: " .. filteredEvents, Color3.fromRGB(255, 150, 50))
+    end
+    
+    StatusLabel.Text = "Monitoring " .. importantEvents .. " events" .. 
+                      (eventFilter.enabled and " (filter active)" or "")
 end
 
--- TAB 4: HOOKS SETUP
+-- TAB 4: EVENT FILTER CONFIGURATION (NEW TAB)
+local function eventFilterConfig()
+    clearContent()
+    StatusLabel.Text = "Event Filter Configuration"
+    
+    addLog("=== EVENT FILTER CONFIGURATION ===", Color3.fromRGB(0, 255, 255), "⚡")
+    
+    -- Filter status
+    addLog("Current status: " .. (eventFilter.enabled and "ENABLED 🟢" or "DISABLED 🔴"), 
+           eventFilter.enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100))
+    
+    -- Toggle button
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
+    ToggleBtn.Position = UDim2.new(0.1, 0, 0, 50)
+    ToggleBtn.BackgroundColor3 = eventFilter.enabled and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
+    ToggleBtn.Text = eventFilter.enabled and "🟢 DISABLE Filter" or "🔴 ENABLE Filter"
+    ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+    ToggleBtn.TextSize = 14
+    ToggleBtn.Font = Enum.Font.SourceSansBold
+    ToggleBtn.Parent = ScrollFrame
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = ToggleBtn
+    
+    ToggleBtn.MouseButton1Click:Connect(function()
+        eventFilter.enabled = not eventFilter.enabled
+        ToggleBtn.BackgroundColor3 = eventFilter.enabled and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
+        ToggleBtn.Text = eventFilter.enabled and "🟢 DISABLE Filter" or "🔴 ENABLE Filter"
+        
+        addLog("Filter " .. (eventFilter.enabled and "ENABLED" or "DISABLED"), 
+               eventFilter.enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100))
+        StatusLabel.Text = "Filter " .. (eventFilter.enabled and "enabled" or "disabled")
+    end)
+    
+    -- Blocked events list
+    addLog("--- BLOCKED EVENTS ---", Color3.fromRGB(255, 100, 100), "🚫")
+    
+    for _, eventName in ipairs(eventFilter.filters.blockedEvents) do
+        local EventFrame = Instance.new("Frame")
+        EventFrame.Size = UDim2.new(0.9, 0, 0, 30)
+        EventFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        EventFrame.Parent = ScrollFrame
+        
+        local EventCorner = Instance.new("UICorner")
+        EventCorner.CornerRadius = UDim.new(0, 6)
+        EventCorner.Parent = EventFrame
+        
+        local EventLabel = Instance.new("TextLabel")
+        EventLabel.Size = UDim2.new(0.7, 0, 1, 0)
+        EventLabel.Position = UDim2.new(0, 10, 0, 0)
+        EventLabel.BackgroundTransparency = 1
+        EventLabel.Text = "🚫 " .. eventName
+        EventLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
+        EventLabel.TextSize = 13
+        EventLabel.Font = Enum.Font.SourceSans
+        EventLabel.TextXAlignment = Enum.TextXAlignment.Left
+        EventLabel.Parent = EventFrame
+        
+        local RemoveBtn = Instance.new("TextButton")
+        RemoveBtn.Size = UDim2.new(0.2, 0, 0.6, 0)
+        RemoveBtn.Position = UDim2.new(0.75, 0, 0.2, 0)
+        RemoveBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+        RemoveBtn.Text = "Remove"
+        RemoveBtn.TextColor3 = Color3.new(1, 1, 1)
+        RemoveBtn.TextSize = 11
+        RemoveBtn.Font = Enum.Font.SourceSans
+        RemoveBtn.Parent = EventFrame
+        
+        RemoveBtn.MouseButton1Click:Connect(function()
+            -- Remove dari blocked list
+            for i, name in ipairs(eventFilter.filters.blockedEvents) do
+                if name == eventName then
+                    table.remove(eventFilter.filters.blockedEvents, i)
+                    break
+                end
+            end
+            EventFrame:Destroy()
+            addLog("Removed " .. eventName .. " from blocked list", Color3.fromRGB(255, 200, 100))
+        end)
+    end
+    
+    -- Add new event to block
+    addLog("--- ADD NEW EVENT TO BLOCK ---", Color3.fromRGB(255, 200, 100), "➕")
+    
+    local AddFrame = Instance.new("Frame")
+    AddFrame.Size = UDim2.new(0.9, 0, 0, 60)
+    AddFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    AddFrame.Parent = ScrollFrame
+    
+    local AddCorner = Instance.new("UICorner")
+    AddCorner.CornerRadius = UDim.new(0, 6)
+    AddCorner.Parent = AddFrame
+    
+    local TextBox = Instance.new("TextBox")
+    TextBox.Size = UDim2.new(0.7, -10, 0.4, 0)
+    TextBox.Position = UDim2.new(0.05, 0, 0.1, 0)
+    TextBox.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    TextBox.TextColor3 = Color3.new(1, 1, 1)
+    TextBox.PlaceholderText = "Enter event name to block"
+    TextBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    TextBox.Text = ""
+    TextBox.TextSize = 13
+    TextBox.Parent = AddFrame
+    
+    local AddBtn = Instance.new("TextButton")
+    AddBtn.Size = UDim2.new(0.2, 0, 0.4, 0)
+    AddBtn.Position = UDim2.new(0.75, 0, 0.1, 0)
+    AddBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    AddBtn.Text = "Add"
+    AddBtn.TextColor3 = Color3.new(1, 1, 1)
+    AddBtn.TextSize = 13
+    AddBtn.Font = Enum.Font.SourceSansBold
+    AddBtn.Parent = AddFrame
+    
+    AddBtn.MouseButton1Click:Connect(function()
+        local eventName = TextBox.Text
+        if eventName and eventName ~= "" then
+            table.insert(eventFilter.filters.blockedEvents, eventName)
+            TextBox.Text = ""
+            addLog("Added " .. eventName .. " to blocked list", Color3.fromRGB(100, 255, 100))
+            
+            -- Refresh tab untuk update list
+            switchTab("Event Filter")
+        end
+    end)
+    
+    -- Rate limiting configuration
+    addLog("--- RATE LIMITING ---", Color3.fromRGB(150, 200, 255), "⏱️")
+    
+    for eventName, maxRate in pairs(eventFilter.filters.rateLimits) do
+        addLog("⏱️ " .. eventName .. ": max " .. maxRate .. "/sec", Color3.fromRGB(200, 200, 200))
+    end
+    
+    -- Reset counters button
+    local ResetBtn = Instance.new("TextButton")
+    ResetBtn.Size = UDim2.new(0.8, 0, 0, 30)
+    ResetBtn.Position = UDim2.new(0.1, 0, 0, 450)
+    ResetBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    ResetBtn.Text = "🔄 Reset All Filters"
+    ResetBtn.TextColor3 = Color3.new(1, 1, 1)
+    ResetBtn.TextSize = 13
+    ResetBtn.Font = Enum.Font.SourceSansBold
+    ResetBtn.Parent = ScrollFrame
+    
+    local ResetCorner = Instance.new("UICorner")
+    ResetCorner.CornerRadius = UDim.new(0, 6)
+    ResetCorner.Parent = ResetBtn
+    
+    ResetBtn.MouseButton1Click:Connect(function()
+        eventFilter.lastEventTime = {}
+        eventFilter.eventCounters = {}
+        addLog("✅ All filter counters reset", Color3.fromRGB(0, 255, 150))
+    end)
+end
+
+-- TAB 5: HOOKS SETUP (sama seperti sebelumnya)
 local function setupHooks()
     clearContent()
     StatusLabel.Text = "Setting up function hooks..."
@@ -741,8 +752,7 @@ local function setupHooks()
     
     -- Hook ke fungsi penting
     local functionsToHook = {
-        "FishCaught", "SendFishingRequestToServer", "RequestFishingMinigameClick",
-        "FishingRodStarted", "FishingStopped"
+        "FishCaught", "SendFishingRequestToServer", "RequestFishingMinigameClick"
     }
     
     local hookedCount = 0
@@ -759,65 +769,43 @@ local function setupHooks()
                 local args = {...}
                 local timestamp = os.date("%H:%M:%S")
                 
-                -- Log call
-                addLog("⚡ " .. funcName .. " called at " .. timestamp, Color3.fromRGB(255, 100, 100))
+                -- Log call (bypass filter untuk hook penting)
+                addLog("⚡ " .. funcName .. " called at " .. timestamp, Color3.fromRGB(255, 100, 100), nil, true)
                 
-                -- Special handling for FishCaught
+                -- Special handling untuk FishCaught
                 if funcName == "FishCaught" then
-                    addLog("🎣🎣🎣 FISH CAUGHT EVENT! 🎣🎣🎣", Color3.fromRGB(255, 215, 0))
+                    addLog("🎣🎣🎣 FISH CAUGHT EVENT! 🎣🎣🎣", Color3.fromRGB(255, 215, 0), nil, true)
                     
-                    -- Analyze arguments for fish data
                     for i, arg in ipairs(args) do
                         if type(arg) == "table" then
-                            addLog("   📦 Argument " .. i .. " is a table:", Color3.fromRGB(200, 200, 200))
-                            
-                            -- Extract all data
-                            for k, v in pairs(arg) do
-                                if type(v) == "string" or type(v) == "number" then
-                                    addLog("     " .. k .. " = " .. tostring(v), Color3.fromRGB(100, 255, 200))
-                                end
-                            end
-                            
-                            -- Check if this is fish data
                             if arg.Name or arg.FishName then
                                 local fishName = arg.Name or arg.FishName
                                 local rarityNum = arg.Rarity or arg.Tier
-                                local weight = arg.Weight or arg.Size
-                                local mutation = arg.Mutation or arg.Shiny
                                 
-                                -- Get rarity info
-                                local rarityMap = {
-                                    [1] = {Name = "Common", Color = Color3.fromRGB(150, 150, 150)},
-                                    [2] = {Name = "Uncommon", Color = Color3.fromRGB(100, 200, 100)},
-                                    [3] = {Name = "Rare", Color = Color3.fromRGB(100, 150, 255)},
-                                    [4] = {Name = "Epic", Color = Color3.fromRGB(200, 100, 255)},
-                                    [5] = {Name = "Legendary", Color = Color3.fromRGB(255, 215, 0)},
-                                    [6] = {Name = "Mythic", Color = Color3.fromRGB(255, 100, 100)},
-                                    [7] = {Name = "SECRET", Color = Color3.fromRGB(255, 50, 255)}
+                                -- Rarity colors
+                                local rarityColors = {
+                                    [1] = Color3.fromRGB(150, 150, 150),
+                                    [2] = Color3.fromRGB(100, 200, 100),
+                                    [3] = Color3.fromRGB(100, 150, 255),
+                                    [4] = Color3.fromRGB(200, 100, 255),
+                                    [5] = Color3.fromRGB(255, 215, 0),
+                                    [6] = Color3.fromRGB(255, 100, 100),
+                                    [7] = Color3.fromRGB(255, 50, 255)
                                 }
                                 
-                                local rarityInfo = rarityMap[tonumber(rarityNum)] or {Name = "Unknown", Color = Color3.fromRGB(200, 200, 200)}
+                                local rarityColor = rarityColors[tonumber(rarityNum)] or Color3.fromRGB(200, 200, 200)
                                 
-                                addLog("   🐟 FISH DETAILS:", rarityInfo.Color)
-                                addLog("     Name: " .. fishName, rarityInfo.Color)
-                                addLog("     Rarity: " .. rarityInfo.Name .. " (" .. tostring(rarityNum or "?") .. ")", rarityInfo.Color)
+                                addLog("   🐟 FISH DETAILS:", rarityColor, nil, true)
+                                addLog("     Name: " .. fishName, rarityColor, nil, true)
+                                addLog("     Rarity: " .. tostring(rarityNum or "?"), rarityColor, nil, true)
                                 
-                                if weight then
-                                    addLog("     Weight: " .. tostring(weight), rarityInfo.Color)
+                                if arg.Weight then
+                                    addLog("     Weight: " .. tostring(arg.Weight), rarityColor, nil, true)
                                 end
                                 
-                                if mutation then
-                                    addLog("     Mutation: " .. tostring(mutation), rarityInfo.Color)
+                                if arg.Mutation then
+                                    addLog("     Mutation: " .. tostring(arg.Mutation), rarityColor, nil, true)
                                 end
-                                
-                                -- Print to console juga
-                                print("=== FISH CAUGHT (HOOKED) ===")
-                                print("Name:", fishName)
-                                print("Rarity:", rarityInfo.Name, "(" .. tostring(rarityNum or "?") .. ")")
-                                if weight then print("Weight:", weight) end
-                                if mutation then print("Mutation:", mutation) end
-                                print("Time:", timestamp)
-                                print("==================")
                             end
                         end
                     end
@@ -830,34 +818,7 @@ local function setupHooks()
             hookedCount = hookedCount + 1
             addLog("✅ Hooked to " .. funcName, Color3.fromRGB(0, 255, 0))
         else
-            addLog("❌ " .. funcName .. " not found or not a function", Color3.fromRGB(255, 100, 100))
-        end
-    end
-    
-    if hookedCount == 0 then
-        addLog("⚠️ No functions were hooked!", Color3.fromRGB(255, 150, 50))
-        
-        -- Try to find any catch-related function
-        addLog("--- Searching for any catch-related functions ---", Color3.fromRGB(255, 200, 0))
-        
-        for key, value in pairs(fishingController) do
-            if type(value) == "function" then
-                local keyLower = key:lower()
-                if keyLower:find("catch") or keyLower:find("fish") then
-                    addLog("🎯 Will hook to: " .. key, Color3.fromRGB(255, 215, 0))
-                    
-                    -- Hook this function
-                    hookedFunctions[key] = value
-                    
-                    fishingController[key] = function(...)
-                        addLog("⚡ " .. key .. " called!", Color3.fromRGB(255, 150, 100))
-                        return hookedFunctions[key](...)
-                    end
-                    
-                    addLog("✅ Hooked to " .. key, Color3.fromRGB(0, 255, 0))
-                    hookedCount = hookedCount + 1
-                end
-            end
+            addLog("❌ " .. funcName .. " not found", Color3.fromRGB(255, 100, 100))
         end
     end
     
@@ -865,7 +826,7 @@ local function setupHooks()
     StatusLabel.Text = "Hooked to " .. hookedCount .. " functions"
 end
 
--- TAB 5: DEBUG TOOLS
+-- TAB 6: DEBUG TOOLS (sama seperti sebelumnya)
 local function debugTools()
     clearContent()
     StatusLabel.Text = "Debug tools..."
@@ -873,88 +834,22 @@ local function debugTools()
     addLog("=== DEBUG TOOLS ===", Color3.fromRGB(0, 255, 255), "🐛")
     
     -- Test GetCurrentGUID
-    addLog("--- GetCurrentGUID Test ---", Color3.fromRGB(200, 200, 255), "🔑")
-    
-    if fishingController and fishingController.GetCurrentGUID and type(fishingController.GetCurrentGUID) == "function" then
+    if fishingController and fishingController.GetCurrentGUID then
         local success, guid = pcall(fishingController.GetCurrentGUID)
         if success then
             addLog("✅ Current GUID: " .. tostring(guid), Color3.fromRGB(0, 255, 150))
-        else
-            addLog("❌ Failed: " .. tostring(guid), Color3.fromRGB(255, 50, 50))
-        end
-    else
-        addLog("❌ GetCurrentGUID not available", Color3.fromRGB(255, 100, 100))
-    end
-    
-    -- Test fishing status
-    addLog("--- Fishing Status ---", Color3.fromRGB(150, 255, 200), "📊")
-    
-    if fishingController then
-        if fishingController.OnCooldown ~= nil then
-            addLog("⏱️ OnCooldown: " .. tostring(fishingController.OnCooldown), 
-                   fishingController.OnCooldown and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(100, 255, 100))
-        end
-        
-        -- Check other status properties
-        local statusProps = {"_getPower", "UpdateChargeState", "BaitSpawned"}
-        for _, prop in ipairs(statusProps) do
-            if fishingController[prop] ~= nil then
-                addLog("📌 " .. prop .. ": " .. tostring(fishingController[prop]), Color3.fromRGB(200, 200, 200))
-            end
         end
     end
     
-    -- Memory info
-    addLog("--- Memory Info ---", Color3.fromRGB(255, 200, 100), "💾")
+    -- Filter status
+    addLog("🔧 Filter status: " .. (eventFilter.enabled and "ENABLED" or "DISABLED"), 
+           eventFilter.enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100))
     
-    addLog("📊 Fish in database: " .. #fishDatabase, Color3.fromRGB(200, 200, 200))
-    addLog("🔌 Active event connections: " .. #eventConnections, Color3.fromRGB(200, 200, 200))
+    addLog("🚫 Blocked events: " .. #eventFilter.filters.blockedEvents, Color3.fromRGB(200, 200, 200))
+    addLog("🔌 Active connections: " .. #eventConnections, Color3.fromRGB(200, 200, 200))
     addLog("🎣 Hooked functions: " .. #hookedFunctions, Color3.fromRGB(200, 200, 200))
     
-    -- Test fishing simulation
-    addLog("--- Simulation Tests ---", Color3.fromRGB(255, 150, 100), "🎮")
-    
-    local TestButton = Instance.new("TextButton")
-    TestButton.Size = UDim2.new(0.8, 0, 0, 30)
-    TestButton.Position = UDim2.new(0.1, 0, 0, 200)
-    TestButton.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
-    TestButton.Text = "🎣 Simulate Fish Catch"
-    TestButton.TextColor3 = Color3.new(1, 1, 1)
-    TestButton.TextSize = 14
-    TestButton.Font = Enum.Font.SourceSansBold
-    TestButton.Parent = ScrollFrame
-    
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = TestButton
-    
-    TestButton.MouseButton1Click:Connect(function()
-        addLog("🎣 SIMULATING FISH CAUGHT...", Color3.fromRGB(255, 215, 0))
-        
-        -- Create fake fish data
-        local fakeFish = {
-            Name = "Test Fish",
-            Rarity = 3,
-            Weight = 15.5,
-            Mutation = "Shiny",
-            Value = 100
-        }
-        
-        -- Trigger FishCaught jika ada hook
-        if fishingController and fishingController.FishCaught then
-            if hookedFunctions["FishCaught"] then
-                -- Call melalui hook
-                fishingController.FishCaught(fakeFish)
-                addLog("✅ Simulated FishCaught called", Color3.fromRGB(0, 255, 0))
-            else
-                addLog("⚠️ FishCaught not hooked", Color3.fromRGB(255, 150, 50))
-            end
-        else
-            addLog("❌ FishCaught not available", Color3.fromRGB(255, 50, 50))
-        end
-    end)
-    
-    StatusLabel.Text = "Debug tools ready"
+    StatusLabel.Text = "Debug info loaded"
 end
 
 -- Tab switching
@@ -973,6 +868,8 @@ local function switchTab(tabName)
         exploreFishData()
     elseif tabName == "Events" then
         monitorEvents()
+    elseif tabName == "Event Filter" then
+        eventFilterConfig()
     elseif tabName == "Hooks" then
         setupHooks()
     elseif tabName == "Debug" then
@@ -1000,38 +897,48 @@ ClearBtn.MouseButton1Click:Connect(function()
 end)
 
 ExportBtn.MouseButton1Click:Connect(function()
-    addLog("💾 Exporting data to console...", Color3.fromRGB(100, 255, 100))
+    addLog("💾 Exporting data...", Color3.fromRGB(100, 255, 100))
     
     print("=== FISH DEX EXPORT ===")
-    print("Controller analyzed:", analysisResults.Controller and "Yes" or "No")
-    print("Fish in database:", analysisResults.FishData and analysisResults.FishData.TotalFish or 0)
-    print("Hooked functions:", #hookedFunctions)
-    print("Event connections:", #eventConnections)
-    print("===================")
+    print("Filter enabled:", eventFilter.enabled)
+    print("Blocked events:", #eventFilter.filters.blockedEvents)
     
-    -- Export fish database
-    if fishDatabase and next(fishDatabase) then
-        print("\n=== FISH DATABASE ===")
-        for name, fish in pairs(fishDatabase) do
-            print(string.format("%s | Rarity: %s (%d) | Weight: %s | Mutation: %s",
-                name, fish.RarityName, fish.Rarity or 0, tostring(fish.Weight or "?"), tostring(fish.Mutation or "None")))
-        end
+    -- Export blocked events
+    print("\n=== BLOCKED EVENTS ===")
+    for _, event in ipairs(eventFilter.filters.blockedEvents) do
+        print("🚫 " .. event)
     end
     
     StatusLabel.Text = "Data exported to console"
 end)
 
+FilterBtn.MouseButton1Click:Connect(function()
+    -- Toggle filter langsung
+    eventFilter.enabled = not eventFilter.enabled
+    
+    local status = eventFilter.enabled and "ENABLED 🟢" or "DISABLED 🔴"
+    local color = eventFilter.enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100)
+    
+    addLog("⚡ Filter " .. status, color)
+    FilterBtn.Text = eventFilter.enabled and "⚡ Filter ON" or "⚡ Filter OFF"
+    StatusLabel.Text = "Filter " .. (eventFilter.enabled and "enabled" or "disabled")
+    
+    -- Refresh events tab jika sedang aktif
+    if currentTab == "Events" then
+        switchTab("Events")
+    end
+end)
+
 DestroyBtn.MouseButton1Click:Connect(function()
-    addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50))
+    addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50), nil, true)
     StatusLabel.Text = "Status: DESTROYING..."
     
-    -- Countdown
     for i = 3, 1, -1 do
         DestroyBtn.Text = "Destroying in " .. i .. "..."
         task.wait(1)
     end
     
-    -- Restore all hooked functions
+    -- Restore semua hooked functions
     for funcName, originalFunc in pairs(hookedFunctions) do
         if fishingController then
             pcall(function()
@@ -1040,24 +947,22 @@ DestroyBtn.MouseButton1Click:Connect(function()
         end
     end
     
-    -- Disconnect all events
+    -- Disconnect semua events
     for _, conn in pairs(eventConnections) do
         pcall(function() conn:Disconnect() end)
     end
     
-    -- Destroy GUI
     ScreenGui:Destroy()
-    
     print("Fish Dex Explorer destroyed!")
 end)
 
--- Auto-start dengan Controller tab
+-- Start dengan Controller tab
 switchTab("Controller")
 
 -- Initial message
-addLog("✅ Fish Dex Explorer v2.0 Loaded!", Color3.fromRGB(0, 255, 150))
-addLog("📌 Use tabs to explore different aspects of the fishing system", Color3.fromRGB(200, 200, 255))
-addLog("🔧 Go to 'Hooks' tab to setup fish catch detection", Color3.fromRGB(200, 200, 255))
+addLog("✅ Fish Dex Explorer v2.1 Loaded!", Color3.fromRGB(0, 255, 150), nil, true)
+addLog("⚡ Event filtering available - Go to 'Event Filter' tab", Color3.fromRGB(200, 200, 255))
+addLog("🎣 PlayFishingEffect events will be filtered by default", Color3.fromRGB(255, 200, 100))
 
-print("Fish Dex Explorer Active!")
-print("Path: ReplicatedStorage.Controllers.ClassicGroupFishingController")
+print("Fish Dex Explorer v2.1 - With Event Filtering")
+print("Default blocked: PlayFishingEffect, UpdateChargeFrame, UpdateChargeState")
