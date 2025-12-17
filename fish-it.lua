@@ -862,6 +862,21 @@ ClearBtn.MouseButton1Click:Connect(function()
 end)
 
 
+-- Tombol Export
+local ExportBtn = Instance.new("TextButton")
+ExportBtn.Size = UDim2.new(0.24, -5, 1, 0)
+ExportBtn.Position = UDim2.new(0.5, 5, 0, 0)
+ExportBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+ExportBtn.Text = "💾 Export"
+ExportBtn.TextColor3 = Color3.new(1, 1, 1)
+ExportBtn.TextSize = 13
+ExportBtn.Font = Enum.Font.SourceSansBold
+ExportBtn.Parent = ControlFrame
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 6)
+Corner.Parent = ExportBtn
+
 -- Event klik tombol Export
 ExportBtn.MouseButton1Click:Connect(function()
     if next(fishDatabase) == nil then
@@ -891,38 +906,6 @@ ExportBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-    
-    -- 2. Export Catch History as CSV
-    if #caughtHistory > 0 then
-        local historyColumns = {"Time", "Name", "Rarity", "Weight", "Mutation"}
-        local historyCSV = tableToCSV(caughtHistory, historyColumns)
-        
-        fullCSV = fullCSV .. "### CATCH HISTORY (LANJUTKAN DI BARIS BARU DI EXCEL) ###\n"
-        fullCSV = fullCSV .. historyCSV .. "\n"
-        
-        addLog("✅ Catch History siap diekspor.", Color3.fromRGB(0, 255, 150))
-    else
-        addLog("⚠️ Catch History kosong. Mulai memancing di tab Catch Logger.", Color3.fromRGB(255, 150, 50))
-    end
-    
-    if fullCSV ~= "" then
-        -- Tampilkan Textbox dengan data CSV
-        toggleClipboardText(true, fullCSV)
-        
-        local instructions = "INSTRUKSI: Teks CSV gabungan telah dimuat di kotak DI BAWAH INI. Tekan lama/Klik Kanan kotak, lalu pilih 'Select All' dan 'Copy'."
-        addLog("--- DATA SIAP DISALIN ---", Color3.fromRGB(255, 255, 0))
-        addLog(instructions, Color3.fromRGB(150, 200, 255))
-        StatusLabel.Text = "Data siap disalin dari kotak"
-        
-        -- Masih cetak ke F9 sebagai cadangan
-        print("=== FISH DEX EXPORT CSV - START COPY BLOCK ===")
-        print(fullCSV)
-        print("=== FISH DEX EXPORT CSV - END COPY BLOCK ===")
-    else
-        toggleClipboardText(false)
-        StatusLabel.Text = "Tidak ada data untuk diekspor"
-    end
-end)
 
 DestroyBtn.MouseButton1Click:Connect(function()
     addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50))
