@@ -757,7 +757,10 @@ switchTab("Real Data")
 
 -- Initial message berdasarkan logs Remote Spy
 addLog("✅ Fish Remote Analyzer Loaded!", Color3.fromRGB(255, 100, 150))
+addLog("📊 Based on 79 Remote Spy events", Color3.fromRGB(200, 200, 255))
 addLog("🎣 Primary remote: FishCaught", Color3.fromRGB(200, 200, 255))
+addLog("📦 Item ID 139 = Silver Tuna (Common)", Color3.fromRGB(150, 150, 150))
+addLog("📦 Item ID 183 = Catfish (Uncommon)", Color3.fromRGB(100, 200, 100))
 
 -- Auto-setup hooks setelah delay
 task.spawn(function()
