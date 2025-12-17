@@ -1,11 +1,11 @@
 -- FISH DEX EXPLORER - General Version
--- Dilengkapi fungsi Export CSV ke Console
+-- Full Code dengan fungsi Export ke Textbox untuk Copy ke Clipboard yang mudah
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- GUI Setup (Tidak diubah)
+-- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "FishDexExplorer"
 ScreenGui.ResetOnSpawn = false
@@ -90,7 +90,7 @@ end
 
 -- Content Area
 local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, -20, 1, -170)
+ContentFrame.Size = UDim2.new(1, -20, 1, -170) -- Ukuran default
 ContentFrame.Position = UDim2.new(0, 10, 0, 125)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 ContentFrame.Parent = MainFrame
@@ -111,6 +111,36 @@ ScrollFrame.Parent = ContentFrame
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Padding = UDim.new(0, 8)
 UIListLayout.Parent = ScrollFrame
+
+-- Tambahan: Textbox Tersembunyi untuk mempermudah Copy ke Clipboard
+local ClipboardText = Instance.new("TextBox")
+ClipboardText.Size = UDim2.new(1, -20, 0, 80) 
+ClipboardText.Position = UDim2.new(0, 10, 1, -110) -- Diposisikan di atas StatusBar
+ClipboardText.BackgroundTransparency = 0.8
+ClipboardText.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+ClipboardText.TextColor3 = Color3.fromRGB(200, 255, 255)
+ClipboardText.TextSize = 12
+ClipboardText.Font = Enum.Font.SourceSans
+ClipboardText.Text = "Data CSV akan muncul di sini setelah diekspor."
+ClipboardText.MultiLine = true
+ClipboardText.TextWrapped = true
+ClipboardText.Visible = false -- Awalnya disembunyikan
+ClipboardText.Parent = MainFrame
+
+local function toggleClipboardText(visible, text)
+    ClipboardText.Visible = visible
+    ClipboardText.Text = text or ""
+    
+    -- Sesuaikan posisi ContentFrame agar tidak bertabrakan
+    if visible then
+        ContentFrame.Size = UDim2.new(1, -20, 1, -220) -- Mengecilkan ContentFrame
+        ClipboardText.Size = UDim2.new(1, -20, 0, 80) -- Ukuran 80 piksel tinggi
+        ClipboardText.Position = UDim2.new(0, 10, 1, -110) -- Geser ke atas StatusBar
+    else
+        ContentFrame.Size = UDim2.new(1, -20, 1, -170) -- Kembali ke ukuran awal
+    end
+end
+-- End Textbox Clipboard Setup
 
 -- Status Bar
 local StatusBar = Instance.new("Frame")
@@ -208,7 +238,7 @@ for i = 1, 7 do
     rarityMap[i] = {Name = name, Color = color}
 end
 
--- [FUNGSI BARU UNTUK EKSPOR CSV]
+-- FUNGSI CSV
 local function tableToCSV(data, columns)
     local csvString = ""
     
@@ -225,7 +255,7 @@ local function tableToCSV(data, columns)
             -- Hapus line breaks/newlines
             formattedValue = formattedValue:gsub("[\n\r]", " ")
             
-            -- Escape double quotes dan bungkus dengan double quotes jika mengandung koma
+            -- Escape double quotes dan bungkus dengan double quotes jika mengandung koma atau quote
             formattedValue = formattedValue:gsub("\"", "\"\"")
             if formattedValue:find(",") or formattedValue:find("\"") then
                 formattedValue = "\"" .. formattedValue .. "\""
@@ -237,7 +267,6 @@ local function tableToCSV(data, columns)
     
     return csvString
 end
--- [AKHIR FUNGSI BARU]
 
 -- Fungsi untuk menambahkan log
 local function addLog(text, color, icon)
@@ -285,7 +314,7 @@ local function clearContent()
     end
 end
 
--- TAB 1: FISH DATABASE (Tidak diubah)
+-- TAB 1: FISH DATABASE
 local function showFishDatabase()
     clearContent()
     StatusLabel.Text = "Loading fish database..."
@@ -358,7 +387,7 @@ local function showFishDatabase()
     StatusLabel.Text = "Loaded " .. totalFish .. " fish"
 end
 
--- Fungsi scan untuk fish data (Tidak diubah)
+-- Fungsi scan untuk fish data
 local function scanForFishData()
     clearContent()
     StatusLabel.Text = "Scanning for fish data..."
@@ -444,7 +473,7 @@ local function scanForFishData()
     end
 end
 
--- TAB 2: CONTROLLER INFO (Tidak diubah)
+-- TAB 2: CONTROLLER INFO
 local function showControllerInfo()
     clearContent()
     StatusLabel.Text = "Loading controller info..."
@@ -543,7 +572,7 @@ local function showControllerInfo()
     StatusLabel.Text = "Controller info loaded"
 end
 
--- TAB 3: CATCH LOGGER (Tidak diubah)
+-- TAB 3: CATCH LOGGER
 local function setupCatchLogger()
     clearContent()
     StatusLabel.Text = "Setting up catch logger..."
@@ -690,7 +719,7 @@ local function setupCatchLogger()
     StatusLabel.Text = "Catch logger ready"
 end
 
--- TAB 4: SETTINGS (Tidak diubah)
+-- TAB 4: SETTINGS
 local function showSettings()
     clearContent()
     StatusLabel.Text = "Settings"
@@ -777,15 +806,18 @@ local function showSettings()
     
     addLog("1. Go to 'Fish Database' tab", Color3.fromRGB(200, 200, 200))
     addLog("2. Click 'Scan' to find fish data", Color3.fromRGB(200, 200, 200))
-    addLog("3. Go to 'Catch Logger' tab", Color3.fromRGB(200, 200, 200))
+    addLog("3. Click 'Export' untuk salin data", Color3.fromRGB(200, 200, 200))
     addLog("4. Start fishing - catches auto-log", Color3.fromRGB(200, 200, 200))
     
     StatusLabel.Text = "Settings loaded"
 end
 
--- Tab switching (Tidak diubah)
+-- Tab switching
 local function switchTab(tabName)
     currentTab = tabName
+    
+    -- Sembunyikan Textbox Clipboard saat berganti tab
+    toggleClipboardText(false)
     
     -- Update tab buttons
     for name, btn in pairs(tabButtons) do
@@ -818,62 +850,67 @@ end)
 
 ClearBtn.MouseButton1Click:Connect(function()
     clearContent()
+    toggleClipboardText(false)
     addLog("🗑️ Log cleared!", Color3.fromRGB(255, 100, 100))
     StatusLabel.Text = "Log cleared"
 end)
 
--- [FUNGSI EKSPOR CSV YANG DIMODIFIKASI]
+-- FUNGSI EKSPOR DENGAN COPY AREA
 ExportBtn.MouseButton1Click:Connect(function()
-    addLog("💾 Exporting data...", Color3.fromRGB(100, 255, 100))
+    clearContent() -- Bersihkan log GUI saat mengekspor
+    addLog("💾 Preparing data for export...", Color3.fromRGB(100, 255, 100))
     
     local totalFish = next(fishDatabase) and table.count(fishDatabase) or 0
-    
-    print("=== FISH DEX EXPORT (CONSOLE) ===")
-    print("Total fish in database:", totalFish)
-    print("Total catches logged:", #caughtHistory)
-    print("Controller loaded:", fishingController and "Yes" or "No")
-    print("=================================")
+    local fullCSV = ""
     
     -- 1. Export Fish Database as CSV
     if totalFish > 0 then
-        addLog("📋 Exporting Fish Database CSV (Salin dari Console)...", Color3.fromRGB(150, 255, 255))
-        
-        -- Kumpulkan semua objek ikan ke dalam tabel list
         local fishList = {}
         for _, fish in pairs(fishDatabase) do
             table.insert(fishList, fish)
         end
-        
         local fishColumns = {"Name", "Rarity", "RarityName", "Weight", "Mutation", "Value", "Source"}
         local fishCSV = tableToCSV(fishList, fishColumns)
         
-        print("\n\n####################################################")
-        print("### FISH DATABASE CSV - COPY & PASTE BELOW TO EXCEL/SHEETS")
-        print("####################################################")
-        print(fishCSV)
+        fullCSV = fullCSV .. "### FISH DATABASE (COPY SEMUA TEKS DI BAWAH INI KE EXCEL) ###\n"
+        fullCSV = fullCSV .. fishCSV .. "\n"
+        
+        addLog("✅ Fish Database siap diekspor.", Color3.fromRGB(0, 255, 150))
     else
-        addLog("⚠️ Fish Database is empty. Scan first!", Color3.fromRGB(255, 150, 50))
+        addLog("⚠️ Fish Database kosong. Jalankan 'Scan' terlebih dahulu.", Color3.fromRGB(255, 150, 50))
     end
     
     -- 2. Export Catch History as CSV
     if #caughtHistory > 0 then
-        addLog("📋 Exporting Catch History CSV (Salin dari Console)...", Color3.fromRGB(150, 255, 255))
-        
         local historyColumns = {"Time", "Name", "Rarity", "Weight", "Mutation"}
         local historyCSV = tableToCSV(caughtHistory, historyColumns)
         
-        print("\n\n####################################################")
-        print("### CATCH HISTORY CSV - COPY & PASTE BELOW TO EXCEL/SHEETS")
-        print("####################################################")
-        print(historyCSV)
+        fullCSV = fullCSV .. "### CATCH HISTORY (LANJUTKAN DI BARIS BARU DI EXCEL) ###\n"
+        fullCSV = fullCSV .. historyCSV .. "\n"
+        
+        addLog("✅ Catch History siap diekspor.", Color3.fromRGB(0, 255, 150))
     else
-        addLog("⚠️ Catch History is empty. Go fishing!", Color3.fromRGB(255, 150, 50))
+        addLog("⚠️ Catch History kosong. Mulai memancing di tab Catch Logger.", Color3.fromRGB(255, 150, 50))
     end
     
-    print("\n\n")
-    StatusLabel.Text = "Data exported to console (CSV)"
+    if fullCSV ~= "" then
+        -- Tampilkan Textbox dengan data CSV
+        toggleClipboardText(true, fullCSV)
+        
+        local instructions = "INSTRUKSI: Teks CSV gabungan telah dimuat di kotak DI BAWAH INI. Tekan lama/Klik Kanan kotak, lalu pilih 'Select All' dan 'Copy'."
+        addLog("--- DATA SIAP DISALIN ---", Color3.fromRGB(255, 255, 0))
+        addLog(instructions, Color3.fromRGB(150, 200, 255))
+        StatusLabel.Text = "Data siap disalin dari kotak"
+        
+        -- Masih cetak ke F9 sebagai cadangan
+        print("=== FISH DEX EXPORT CSV - START COPY BLOCK ===")
+        print(fullCSV)
+        print("=== FISH DEX EXPORT CSV - END COPY BLOCK ===")
+    else
+        toggleClipboardText(false)
+        StatusLabel.Text = "Tidak ada data untuk diekspor"
+    end
 end)
--- [AKHIR FUNGSI EKSPOR CSV YANG DIMODIFIKASI]
 
 DestroyBtn.MouseButton1Click:Connect(function()
     addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50))
@@ -898,10 +935,10 @@ DestroyBtn.MouseButton1Click:Connect(function()
     print("Fish Dex Explorer destroyed!")
 end)
 
--- Auto-start (Tidak diubah)
+-- Auto-start
 addLog("✅ Fish Dex Explorer Loaded!", Color3.fromRGB(0, 255, 200))
-addLog("📌 Click 'Scan' to find fish data", Color3.fromRGB(200, 200, 255))
-addLog("🎣 Go to 'Catch Logger' to log fish catches", Color3.fromRGB(200, 200, 255))
+addLog("📌 Click 'Scan' untuk mendapatkan data ikan", Color3.fromRGB(200, 200, 255))
+addLog("💡 Gunakan tombol Export untuk salin ke Excel!", Color3.fromRGB(200, 200, 255))
 
 -- Start dengan Fish Database tab
 switchTab("Fish Database")
@@ -916,4 +953,3 @@ task.spawn(function()
 end)
 
 print("Fish Dex Explorer - General Version Loaded!")
-print("No event monitoring - Focus on fish data only")
