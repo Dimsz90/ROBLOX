@@ -1,865 +1,1033 @@
--- FISH DEX EXPLORER - General Version
--- Tanpa event monitoring untuk fokus pada data ikan saja
+--[[
+    ╔═══════════════════════════════════════════════╗
+    ║   Advanced Dex Explorer                      ║
+    ║   - Full object inspection                   ║
+    ║   - Property viewer                          ║
+    ║   - RemoteEvent spy                          ║
+    ║   - Export to clipboard                      ║
+    ╚═══════════════════════════════════════════════╝
+]]
 
+if getgenv().AdvancedDex then return end
+getgenv().AdvancedDex = true
+
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
 
--- GUI Setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FishDexExplorer"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
+-- State
+local currentPath = {}
+local currentObject = game
+local spyingEvents = {}
+local eventLogs = {}
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 550, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -275, 0.5, -250)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(0, 200, 150)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- ============================================
+-- UI CREATION
+-- ============================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AdvancedDexExplorer"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = MainFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(0, 200, 150)
-UIStroke.Thickness = 2
-UIStroke.Parent = MainFrame
-
--- Title
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 50)
-Title.Position = UDim2.new(0, 10, 0, 10)
-Title.BackgroundTransparency = 1
-Title.Text = "🐠 FISH DEX EXPLORER"
-Title.TextColor3 = Color3.fromRGB(0, 255, 200)
-Title.TextSize = 24
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(1, -20, 0, 20)
-SubTitle.Position = UDim2.new(0, 10, 0, 55)
-SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Complete Fish Database & Analysis"
-SubTitle.TextColor3 = Color3.fromRGB(180, 220, 255)
-SubTitle.TextSize = 14
-SubTitle.Font = Enum.Font.SourceSans
-SubTitle.Parent = MainFrame
-
--- Tab System
-local TabsFrame = Instance.new("Frame")
-TabsFrame.Size = UDim2.new(1, -20, 0, 40)
-TabsFrame.Position = UDim2.new(0, 10, 0, 80)
-TabsFrame.BackgroundTransparency = 1
-TabsFrame.Parent = MainFrame
-
-local Tabs = {
-    "Fish Database",
-    "Controller Info", 
-    "Catch Logger",
-    "Settings"
-}
-
-local currentTab = "Fish Database"
-local tabButtons = {}
-
-for i, tabName in ipairs(Tabs) do
-    local tabBtn = Instance.new("TextButton")
-    tabBtn.Name = tabName .. "Tab"
-    tabBtn.Size = UDim2.new(1/#Tabs, -2, 1, 0)
-    tabBtn.Position = UDim2.new((i-1)/#Tabs, 0, 0, 0)
-    tabBtn.BackgroundColor3 = tabName == "Fish Database" and Color3.fromRGB(0, 120, 180) or Color3.fromRGB(40, 40, 60)
-    tabBtn.Text = tabName
-    tabBtn.TextColor3 = Color3.new(1, 1, 1)
-    tabBtn.TextSize = 13
-    tabBtn.Font = Enum.Font.SourceSansBold
-    tabBtn.Parent = TabsFrame
-    
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = tabBtn
-    
-    tabButtons[tabName] = tabBtn
+pcall(function()
+    screenGui.Parent = game:GetService("CoreGui")
+end)
+if not screenGui.Parent then
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Content Area
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, -20, 1, -170)
-ContentFrame.Position = UDim2.new(0, 10, 0, 125)
-ContentFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-ContentFrame.Parent = MainFrame
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 850, 0, 600)
+mainFrame.Position = UDim2.new(0.5, -425, 0.5, -300)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
 
-local ContentCorner = Instance.new("UICorner")
-ContentCorner.CornerRadius = UDim.new(0, 8)
-ContentCorner.Parent = ContentFrame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.Parent = mainFrame
 
--- ScrollFrame untuk konten
-local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, -10, 1, -10)
-ScrollFrame.Position = UDim2.new(0, 5, 0, 5)
-ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.ScrollBarThickness = 8
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 120, 150)
-ScrollFrame.Parent = ContentFrame
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+header.BorderSizePixel = 0
+header.Parent = mainFrame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.Parent = ScrollFrame
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 10)
+headerCorner.Parent = header
 
--- Status Bar
-local StatusBar = Instance.new("Frame")
-StatusBar.Size = UDim2.new(1, -20, 0, 30)
-StatusBar.Position = UDim2.new(0, 10, 1, -70)
-StatusBar.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-StatusBar.Parent = MainFrame
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Text = "🔍 Advanced Dex Explorer"
+titleLabel.Size = UDim2.new(1, -100, 1, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 16
+titleLabel.Parent = header
 
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -10, 1, 0)
-StatusLabel.Position = UDim2.new(0, 5, 0, 0)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Ready"
-StatusLabel.TextColor3 = Color3.fromRGB(200, 255, 200)
-StatusLabel.TextSize = 13
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.Parent = StatusBar
+-- Close button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 35, 0, 35)
+closeBtn.Position = UDim2.new(1, -38, 0, 2.5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Text = "✕"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = header
 
--- Control Buttons
-local ControlFrame = Instance.new("Frame")
-ControlFrame.Size = UDim2.new(1, -20, 0, 30)
-ControlFrame.Position = UDim2.new(0, 10, 1, -30)
-ControlFrame.BackgroundTransparency = 1
-ControlFrame.Parent = MainFrame
+local closeBtnCorner = Instance.new("UICorner")
+closeBtnCorner.CornerRadius = UDim.new(0, 6)
+closeBtnCorner.Parent = closeBtn
 
-local ScanBtn = Instance.new("TextButton")
-ScanBtn.Size = UDim2.new(0.24, -5, 1, 0)
-ScanBtn.Position = UDim2.new(0, 0, 0, 0)
-ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
-ScanBtn.Text = "🔍 Scan"
-ScanBtn.TextColor3 = Color3.new(1, 1, 1)
-ScanBtn.TextSize = 13
-ScanBtn.Font = Enum.Font.SourceSansBold
-ScanBtn.Parent = ControlFrame
+-- Minimize button
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 35, 0, 35)
+minBtn.Position = UDim2.new(1, -78, 0, 2.5)
+minBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 120)
+minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minBtn.Text = "—"
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 18
+minBtn.BorderSizePixel = 0
+minBtn.Parent = header
 
-local ClearBtn = Instance.new("TextButton")
-ClearBtn.Size = UDim2.new(0.24, -5, 1, 0)
-ClearBtn.Position = UDim2.new(0.25, 5, 0, 0)
-ClearBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-ClearBtn.Text = "🗑️ Clear"
-ClearBtn.TextColor3 = Color3.new(1, 1, 1)
-ClearBtn.TextSize = 13
-ClearBtn.Font = Enum.Font.SourceSansBold
-ClearBtn.Parent = ControlFrame
+local minBtnCorner = Instance.new("UICorner")
+minBtnCorner.CornerRadius = UDim.new(0, 6)
+minBtnCorner.Parent = minBtn
 
-local ExportBtn = Instance.new("TextButton")
-ExportBtn.Size = UDim2.new(0.24, -5, 1, 0)
-ExportBtn.Position = UDim2.new(0.5, 5, 0, 0)
-ExportBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-ExportBtn.Text = "💾 Export"
-ExportBtn.TextColor3 = Color3.new(1, 1, 1)
-ExportBtn.TextSize = 13
-ExportBtn.Font = Enum.Font.SourceSansBold
-ExportBtn.Parent = ControlFrame
+-- Tab Bar
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, -10, 0, 35)
+tabBar.Position = UDim2.new(0, 5, 0, 45)
+tabBar.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+tabBar.BorderSizePixel = 0
+tabBar.Parent = mainFrame
 
-local DestroyBtn = Instance.new("TextButton")
-DestroyBtn.Size = UDim2.new(0.24, -5, 1, 0)
-DestroyBtn.Position = UDim2.new(0.75, 5, 0, 0)
-DestroyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-DestroyBtn.Text = "❌ Destroy"
-DestroyBtn.TextColor3 = Color3.new(1, 1, 1)
-DestroyBtn.TextSize = 13
-DestroyBtn.Font = Enum.Font.SourceSansBold
-DestroyBtn.Parent = ControlFrame
+local tabBarCorner = Instance.new("UICorner")
+tabBarCorner.CornerRadius = UDim.new(0, 6)
+tabBarCorner.Parent = tabBar
 
--- Button corners
-for _, btn in pairs({ScanBtn, ClearBtn, ExportBtn, DestroyBtn}) do
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = btn
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 3)
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Parent = tabBar
+
+-- Content Container
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, -10, 1, -90)
+contentFrame.Position = UDim2.new(0, 5, 0, 85)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+-- ============================================
+-- TAB SYSTEM
+-- ============================================
+local tabs = {}
+local activeTab = nil
+
+local function createTab(name, icon, onActivate)
+    local tab = Instance.new("TextButton")
+    tab.Size = UDim2.new(0, 150, 1, -6)
+    tab.Position = UDim2.new(0, 0, 0, 3)
+    tab.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    tab.TextColor3 = Color3.fromRGB(180, 180, 200)
+    tab.Text = icon .. " " .. name
+    tab.Font = Enum.Font.Gotham
+    tab.TextSize = 12
+    tab.BorderSizePixel = 0
+    tab.Parent = tabBar
+    
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 4)
+    tabCorner.Parent = tab
+    
+    local content = Instance.new("Frame")
+    content.Size = UDim2.new(1, 0, 1, 0)
+    content.BackgroundTransparency = 1
+    content.Visible = false
+    content.Parent = contentFrame
+    
+    tab.MouseButton1Click:Connect(function()
+        -- Deactivate all tabs
+        for _, t in pairs(tabs) do
+            t.tab.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+            t.tab.TextColor3 = Color3.fromRGB(180, 180, 200)
+            t.content.Visible = false
+        end
+        
+        -- Activate this tab
+        tab.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+        tab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        content.Visible = true
+        activeTab = {tab = tab, content = content, activate = onActivate}
+        
+        if onActivate then onActivate() end
+    end)
+    
+    tabs[name] = {tab = tab, content = content, activate = onActivate}
+    return content
 end
 
--- Data storage
-local fishDatabase = {}
-local fishingController = nil
-local originalFishCaught = nil
-local rarityMap = {}
-local caughtHistory = {}
+-- ============================================
+-- TAB 1: EXPLORER
+-- ============================================
+local explorerContent = createTab("Explorer", "📁", function()
+    updateExplorer(currentObject)
+end)
 
--- Initialize rarity map
-for i = 1, 7 do
-    local name = "Unknown"
-    local color = Color3.fromRGB(150, 150, 150)
-    
-    if i == 1 then name = "Common"; color = Color3.fromRGB(150, 150, 150)
-    elseif i == 2 then name = "Uncommon"; color = Color3.fromRGB(100, 200, 100)
-    elseif i == 3 then name = "Rare"; color = Color3.fromRGB(100, 150, 255)
-    elseif i == 4 then name = "Epic"; color = Color3.fromRGB(200, 100, 255)
-    elseif i == 5 then name = "Legendary"; color = Color3.fromRGB(255, 215, 0)
-    elseif i == 6 then name = "Mythic"; color = Color3.fromRGB(255, 100, 100)
-    elseif i == 7 then name = "SECRET"; color = Color3.fromRGB(255, 50, 255)
+-- Path bar
+local pathBar = Instance.new("Frame")
+pathBar.Size = UDim2.new(1, 0, 0, 30)
+pathBar.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+pathBar.BorderSizePixel = 0
+pathBar.Parent = explorerContent
+
+local pathCorner = Instance.new("UICorner")
+pathCorner.CornerRadius = UDim.new(0, 6)
+pathCorner.Parent = pathBar
+
+local pathLabel = Instance.new("TextLabel")
+pathLabel.Size = UDim2.new(1, -80, 1, 0)
+pathLabel.Position = UDim2.new(0, 10, 0, 0)
+pathLabel.BackgroundTransparency = 1
+pathLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+pathLabel.Font = Enum.Font.Code
+pathLabel.TextSize = 11
+pathLabel.TextXAlignment = Enum.TextXAlignment.Left
+pathLabel.Text = "game"
+pathLabel.Parent = pathBar
+
+-- Back button
+local backBtn = Instance.new("TextButton")
+backBtn.Size = UDim2.new(0, 60, 0, 24)
+backBtn.Position = UDim2.new(1, -65, 0, 3)
+backBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
+backBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+backBtn.Text = "← Back"
+backBtn.Font = Enum.Font.Gotham
+backBtn.TextSize = 10
+backBtn.BorderSizePixel = 0
+backBtn.Parent = pathBar
+
+local backCorner = Instance.new("UICorner")
+backCorner.CornerRadius = UDim.new(0, 4)
+backCorner.Parent = backBtn
+
+-- Explorer list
+local explorerList = Instance.new("ScrollingFrame")
+explorerList.Size = UDim2.new(0.5, -5, 1, -35)
+explorerList.Position = UDim2.new(0, 0, 0, 35)
+explorerList.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+explorerList.BorderSizePixel = 0
+explorerList.ScrollBarThickness = 6
+explorerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+explorerList.Parent = explorerContent
+
+local explorerCorner = Instance.new("UICorner")
+explorerCorner.CornerRadius = UDim.new(0, 6)
+explorerCorner.Parent = explorerList
+
+local explorerLayout = Instance.new("UIListLayout")
+explorerLayout.Padding = UDim.new(0, 2)
+explorerLayout.SortOrder = Enum.SortOrder.Name
+explorerLayout.Parent = explorerList
+
+-- Properties panel
+local propertiesPanel = Instance.new("ScrollingFrame")
+propertiesPanel.Size = UDim2.new(0.5, -5, 1, -35)
+propertiesPanel.Position = UDim2.new(0.5, 5, 0, 35)
+propertiesPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+propertiesPanel.BorderSizePixel = 0
+propertiesPanel.ScrollBarThickness = 6
+propertiesPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
+propertiesPanel.Parent = explorerContent
+
+local propCorner = Instance.new("UICorner")
+propCorner.CornerRadius = UDim.new(0, 6)
+propCorner.Parent = propertiesPanel
+
+local propLayout = Instance.new("UIListLayout")
+propLayout.Padding = UDim.new(0, 2)
+propLayout.SortOrder = Enum.SortOrder.Name
+propLayout.Parent = propertiesPanel
+
+-- ============================================
+-- EXPLORER FUNCTIONS
+-- ============================================
+local function getIcon(obj)
+    if obj:IsA("Folder") then return "📂"
+    elseif obj:IsA("RemoteEvent") then return "📡"
+    elseif obj:IsA("RemoteFunction") then return "⚡"
+    elseif obj:IsA("ModuleScript") then return "📜"
+    elseif obj:IsA("LocalScript") then return "📝"
+    elseif obj:IsA("Script") then return "📄"
+    elseif obj:IsA("Model") then return "🎭"
+    elseif obj:IsA("Part") then return "🟦"
+    elseif obj:IsA("MeshPart") then return "🎨"
+    elseif obj:IsA("Tool") then return "🔧"
+    elseif obj:IsA("Sound") then return "🔊"
+    elseif obj:IsA("ParticleEmitter") then return "✨"
+    elseif obj:IsA("Light") then return "💡"
+    elseif obj:IsA("ScreenGui") then return "📱"
+    else return "📦"
     end
-    
-    rarityMap[i] = {Name = name, Color = color}
 end
 
--- Fungsi untuk menambahkan log
-local function addLog(text, color, icon)
-    local Entry = Instance.new("Frame")
-    Entry.Size = UDim2.new(1, 0, 0, 0)
-    Entry.AutomaticSize = Enum.AutomaticSize.Y
-    Entry.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-    Entry.Parent = ScrollFrame
-    
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = Entry
-    
-    local Padding = Instance.new("UIPadding")
-    Padding.PaddingLeft = UDim.new(0, 10)
-    Padding.PaddingRight = UDim.new(0, 10)
-    Padding.PaddingTop = UDim.new(0, 8)
-    Padding.PaddingBottom = UDim.new(0, 8)
-    Padding.Parent = Entry
-    
-    local Content = Instance.new("TextLabel")
-    Content.Size = UDim2.new(1, -20, 0, 0)
-    Content.AutomaticSize = Enum.AutomaticSize.Y
-    Content.BackgroundTransparency = 1
-    Content.Text = (icon or "") .. " " .. text
-    Content.TextColor3 = color or Color3.new(1, 1, 1)
-    Content.TextSize = 13
-    Content.Font = Enum.Font.SourceSans
-    Content.TextXAlignment = Enum.TextXAlignment.Left
-    Content.TextYAlignment = Enum.TextYAlignment.Top
-    Content.TextWrapped = true
-    Content.Parent = Entry
-    
-    task.wait()
-    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
-    ScrollFrame.CanvasPosition = Vector2.new(0, ScrollFrame.CanvasSize.Y.Offset)
-end
+local selectedObject = nil
 
--- Fungsi clear content
-local function clearContent()
-    for _, child in pairs(ScrollFrame:GetChildren()) do
+function updateExplorer(obj)
+    currentObject = obj
+    
+    -- Update path
+    local path = obj:GetFullName()
+    pathLabel.Text = path
+    
+    -- Clear explorer
+    for _, child in pairs(explorerList:GetChildren()) do
         if child:IsA("Frame") then
             child:Destroy()
         end
     end
-end
-
--- TAB 1: FISH DATABASE
-local function showFishDatabase()
-    clearContent()
-    StatusLabel.Text = "Loading fish database..."
     
-    addLog("=== FISH DATABASE ===", Color3.fromRGB(0, 255, 200), "🐠")
-    
-    if next(fishDatabase) == nil then
-        addLog("📂 Database is empty. Click 'Scan' to find fish data.", Color3.fromRGB(255, 200, 100))
-        return
-    end
-    
-    local totalFish = 0
-    local fishByRarity = {}
-    
-    -- Group fish by rarity
-    for _, fish in pairs(fishDatabase) do
-        totalFish = totalFish + 1
-        local rarity = fish.Rarity or 1
-        
-        if not fishByRarity[rarity] then
-            fishByRarity[rarity] = {}
-        end
-        table.insert(fishByRarity[rarity], fish)
-    end
-    
-    addLog("📊 Total Fish: " .. totalFish, Color3.fromRGB(0, 255, 150))
-    
-    -- Display by rarity (1 to 7)
-    for rarity = 1, 7 do
-        if fishByRarity[rarity] then
-            local rarityInfo = rarityMap[rarity]
-            local fishList = fishByRarity[rarity]
-            
-            addLog("⭐ " .. rarityInfo.Name .. " (" .. #fishList .. ")", rarityInfo.Color)
-            
-            -- Sort fish by name
-            table.sort(fishList, function(a, b)
-                return a.Name < b.Name
-            end)
-            
-            for _, fish in ipairs(fishList) do
-                local info = "   🐟 " .. fish.Name
-                
-                if fish.Weight then
-                    info = info .. " | Weight: " .. tostring(fish.Weight)
-                end
-                
-                if fish.Mutation and fish.Mutation ~= "None" then
-                    info = info .. " | Mutation: " .. tostring(fish.Mutation)
-                end
-                
-                addLog(info, rarityInfo.Color)
-            end
-        end
-    end
-    
-    -- Show statistics
-    addLog("=== DATABASE STATISTICS ===", Color3.fromRGB(255, 255, 0), "📈")
-    
-    for rarity = 1, 7 do
-        if fishByRarity[rarity] then
-            local rarityInfo = rarityMap[rarity]
-            local count = #fishByRarity[rarity]
-            local percentage = math.floor((count / totalFish) * 100)
-            
-            addLog(rarityInfo.Name .. ": " .. count .. " fish (" .. percentage .. "%)", rarityInfo.Color)
-        end
-    end
-    
-    StatusLabel.Text = "Loaded " .. totalFish .. " fish"
-end
-
--- Fungsi scan untuk fish data
-local function scanForFishData()
-    clearContent()
-    StatusLabel.Text = "Scanning for fish data..."
-    
-    addLog("=== SCANNING FISH DATA ===", Color3.fromRGB(0, 255, 200), "🔍")
-    
-    -- Reset database
-    fishDatabase = {}
-    
-    -- Scan ReplicatedStorage untuk fish modules
-    local modulesScanned = 0
-    local fishFound = 0
-    
-    for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-        if item:IsA("ModuleScript") then
-            modulesScanned = modulesScanned + 1
-            
-            -- Try to load module
-            local success, data = pcall(function()
-                return require(item)
-            end)
-            
-            if success and type(data) == "table" then
-                -- Check for fish data
-                for key, value in pairs(data) do
-                    if type(value) == "table" then
-                        local fishName = value.Name or value.FishName or tostring(key)
-                        local rarityNum = value.Rarity or value.Tier
-                        
-                        -- Valid fish data check
-                        if fishName and rarityNum and type(rarityNum) == "number" then
-                            fishFound = fishFound + 1
-                            
-                            local fishInfo = {
-                                Name = fishName,
-                                Rarity = rarityNum,
-                                RarityName = rarityMap[rarityNum] and rarityMap[rarityNum].Name or "Unknown",
-                                Weight = value.Weight or value.Size,
-                                Mutation = value.Mutation or value.Shiny or value.Variant or "None",
-                                Value = value.Value or value.Price,
-                                Source = item.Name
-                            }
-                            
-                            fishDatabase[fishName] = fishInfo
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    addLog("✅ Scan Complete!", Color3.fromRGB(0, 255, 150))
-    addLog("📦 Modules scanned: " .. modulesScanned, Color3.fromRGB(200, 200, 255))
-    addLog("🐟 Fish found: " .. fishFound, Color3.fromRGB(100, 255, 200))
-    
-    if fishFound > 0 then
-        -- Show sample of found fish
-        addLog("=== SAMPLE OF FOUND FISH ===", Color3.fromRGB(255, 255, 0), "🎣")
-        
-        local sampleCount = 0
-        for _, fish in pairs(fishDatabase) do
-            if sampleCount < 5 then
-                local rarityInfo = rarityMap[fish.Rarity]
-                local color = rarityInfo and rarityInfo.Color or Color3.fromRGB(200, 200, 200)
-                
-                addLog(fish.Name .. " (" .. (fish.RarityName or "?") .. ")", color)
-                sampleCount = sampleCount + 1
-            else
-                addLog("... and " .. (fishFound - 5) .. " more", Color3.fromRGB(150, 150, 150))
-                break
-            end
-        end
-    else
-        addLog("❌ No fish data found!", Color3.fromRGB(255, 100, 100))
-        addLog("💡 Check if fish data is stored in ModuleScripts", Color3.fromRGB(255, 200, 100))
-    end
-    
-    StatusLabel.Text = "Found " .. fishFound .. " fish"
-    
-    -- Auto-show database setelah scan
-    if currentTab == "Fish Database" then
-        showFishDatabase()
-    end
-end
-
--- TAB 2: CONTROLLER INFO
-local function showControllerInfo()
-    clearContent()
-    StatusLabel.Text = "Loading controller info..."
-    
-    addLog("=== FISHING CONTROLLER INFO ===", Color3.fromRGB(0, 255, 200), "🎮")
-    
-    -- Cari controller
-    local controllerPath = "Controllers.ClassicGroupFishingController"
-    local current = ReplicatedStorage
-    
-    for part in controllerPath:gmatch("[^.]+") do
-        current = current:FindFirstChild(part)
-        if not current then break end
-    end
-    
-    if not current or not current:IsA("ModuleScript") then
-        addLog("❌ Controller not found at: " .. controllerPath, Color3.fromRGB(255, 50, 50))
-        
-        -- Coba cari di tempat lain
-        addLog("--- Searching for fishing controller ---", Color3.fromRGB(255, 200, 100))
-        
-        local found = false
-        for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-            if item:IsA("ModuleScript") then
-                local name = item.Name:lower()
-                if name:find("fish") and (name:find("controller") or name:find("control")) then
-                    addLog("📦 Found: " .. item:GetFullName(), Color3.fromRGB(150, 200, 255))
-                    current = item
-                    found = true
-                    break
-                end
-            end
-        end
-        
-        if not found then
-            addLog("❌ No fishing controller found", Color3.fromRGB(255, 100, 100))
-            return
-        end
-    end
-    
-    addLog("✅ Controller: " .. current:GetFullName(), Color3.fromRGB(0, 255, 150))
-    
-    -- Load controller
-    local success, data = pcall(function()
-        return require(current)
+    -- Add children
+    local children = obj:GetChildren()
+    table.sort(children, function(a, b)
+        return a.Name < b.Name
     end)
     
-    if not success then
-        addLog("❌ Failed to load controller: " .. tostring(data), Color3.fromRGB(255, 50, 50))
-        return
-    end
-    
-    fishingController = data
-    addLog("📦 Controller loaded successfully", Color3.fromRGB(0, 255, 0))
-    
-    -- Show key functions
-    addLog("=== KEY FUNCTIONS ===", Color3.fromRGB(255, 255, 0), "🔑")
-    
-    local keyFunctions = {
-        "FishCaught", "GetCurrentGUID", "RequestFishingMinigameClick",
-        "SendFishingRequestToServer", "FishingRodStarted", "Start",
-        "RequestChargeFishingRod", "FishingStopped", "Init"
-    }
-    
-    local foundFunctions = 0
-    for _, funcName in ipairs(keyFunctions) do
-        if data[funcName] then
-            local funcType = type(data[funcName])
-            local color = funcType == "function" and Color3.fromRGB(100, 255, 200) or Color3.fromRGB(255, 200, 100)
-            
-            addLog(funcName .. " (" .. funcType .. ")", color)
-            foundFunctions = foundFunctions + 1
-        else
-            addLog("❌ " .. funcName .. " (not found)", Color3.fromRGB(150, 150, 150))
-        end
-    end
-    
-    addLog("📊 Found " .. foundFunctions .. " key functions", Color3.fromRGB(0, 255, 150))
-    
-    -- Test GetCurrentGUID jika ada
-    if data.GetCurrentGUID and type(data.GetCurrentGUID) == "function" then
-        addLog("=== CURRENT FISHING INFO ===", Color3.fromRGB(200, 200, 255), "🎣")
+    for _, child in pairs(children) do
+        local entry = Instance.new("Frame")
+        entry.Size = UDim2.new(1, -8, 0, 25)
+        entry.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        entry.BorderSizePixel = 0
+        entry.Parent = explorerList
         
-        local success, guid = pcall(data.GetCurrentGUID)
-        if success then
-            addLog("🔑 Current GUID: " .. tostring(guid), Color3.fromRGB(100, 255, 200))
-        end
+        local entryCorner = Instance.new("UICorner")
+        entryCorner.CornerRadius = UDim.new(0, 4)
+        entryCorner.Parent = entry
         
-        -- Check cooldown
-        if data.OnCooldown ~= nil then
-            addLog("⏱️ On Cooldown: " .. tostring(data.OnCooldown), 
-                   data.OnCooldown and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(100, 255, 100))
-        end
-    end
-    
-    StatusLabel.Text = "Controller info loaded"
-end
-
--- TAB 3: CATCH LOGGER
-local function setupCatchLogger()
-    clearContent()
-    StatusLabel.Text = "Setting up catch logger..."
-    
-    addLog("=== CATCH LOGGER ===", Color3.fromRGB(0, 255, 200), "🎣")
-    
-    if not fishingController then
-        addLog("⚠️ Please load controller info first!", Color3.fromRGB(255, 150, 50))
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 1, 0)
+        btn.BackgroundTransparency = 1
+        btn.TextColor3 = Color3.fromRGB(220, 220, 240)
+        btn.Text = getIcon(child) .. " " .. child.Name
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 11
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.TextTruncate = Enum.TextTruncate.AtEnd
+        btn.Parent = entry
         
-        -- Coba load otomatis
-        local controllerPath = "Controllers.ClassicGroupFishingController"
-        local current = ReplicatedStorage
+        local padding = Instance.new("UIPadding")
+        padding.PaddingLeft = UDim.new(0, 8)
+        padding.Parent = btn
         
-        for part in controllerPath:gmatch("[^.]+") do
-            current = current:FindFirstChild(part)
-            if not current then break end
-        end
+        -- Click to navigate
+        btn.MouseButton1Click:Connect(function()
+            table.insert(currentPath, obj)
+            updateExplorer(child)
+            showProperties(child)
+        end)
         
-        if current and current:IsA("ModuleScript") then
-            local success, data = pcall(require, current)
-            if success then
-                fishingController = data
-                addLog("✅ Auto-loaded controller", Color3.fromRGB(0, 255, 150))
-            end
-        end
-    end
-    
-    if not fishingController then
-        addLog("❌ Cannot setup logger without controller", Color3.fromRGB(255, 50, 50))
-        return
-    end
-    
-    -- Setup hook untuk FishCaught
-    if fishingController.FishCaught and type(fishingController.FishCaught) == "function" then
-        addLog("🎯 Found FishCaught function!", Color3.fromRGB(255, 215, 0))
-        
-        -- Simpan fungsi asli
-        originalFishCaught = fishingController.FishCaught
-        
-        -- Hook function
-        fishingController.FishCaught = function(...)
-            local args = {...}
-            local timestamp = os.date("%H:%M:%S")
-            
-            -- Log catch
-            addLog("🎣 FISH CAUGHT at " .. timestamp, Color3.fromRGB(255, 215, 0))
-            
-            -- Analyze fish data
-            for i, arg in ipairs(args) do
-                if type(arg) == "table" then
-                    local fishName = arg.Name or arg.FishName
-                    local rarityNum = arg.Rarity or arg.Tier
-                    local weight = arg.Weight or arg.Size
-                    local mutation = arg.Mutation or arg.Shiny or arg.Variant
-                    
-                    if fishName then
-                        -- Get rarity info
-                        local rarityInfo = rarityMap[tonumber(rarityNum)] or {Name = "Unknown", Color = Color3.fromRGB(200, 200, 200)}
-                        
-                        addLog("   🐟 " .. fishName, rarityInfo.Color)
-                        addLog("   ⭐ Rarity: " .. rarityInfo.Name .. " (" .. tostring(rarityNum or "?") .. ")", rarityInfo.Color)
-                        
-                        if weight then
-                            addLog("   ⚖️ Weight: " .. tostring(weight), rarityInfo.Color)
-                        end
-                        
-                        if mutation then
-                            addLog("   ✨ Mutation: " .. tostring(mutation), rarityInfo.Color)
-                        end
-                        
-                        -- Simpan ke history
-                        table.insert(caughtHistory, {
-                            Time = timestamp,
-                            Name = fishName,
-                            Rarity = rarityNum,
-                            Weight = weight,
-                            Mutation = mutation
-                        })
-                        
-                        -- Update status
-                        StatusLabel.Text = "Last caught: " .. fishName
-                        
-                        -- Print ke console juga
-                        print("=== FISH CAUGHT ===")
-                        print("Time:", timestamp)
-                        print("Name:", fishName)
-                        print("Rarity:", rarityInfo.Name, "(" .. tostring(rarityNum or "?") .. ")")
-                        if weight then print("Weight:", weight) end
-                        if mutation then print("Mutation:", mutation) end
-                        print("================")
-                    end
-                end
-            end
-            
-            -- Panggil fungsi asli
-            return originalFishCaught(...)
-        end
-        
-        addLog("✅ Successfully hooked to FishCaught!", Color3.fromRGB(0, 255, 0))
-        addLog("📌 Now go fishing! All catches will be logged here.", Color3.fromRGB(200, 200, 255))
-        
-    else
-        addLog("❌ FishCaught function not found", Color3.fromRGB(255, 100, 100))
-        
-        -- Coba cari fungsi lain
-        addLog("--- Searching for catch-related functions ---", Color3.fromRGB(255, 200, 100))
-        
-        local found = false
-        for key, value in pairs(fishingController) do
-            if type(value) == "function" then
-                local keyLower = key:lower()
-                if keyLower:find("catch") or keyLower:find("fish") then
-                    addLog("🎯 Found: " .. key, Color3.fromRGB(255, 215, 0))
-                    found = true
-                end
-            end
-        end
-        
-        if not found then
-            addLog("❌ No catch functions found", Color3.fromRGB(255, 50, 50))
-        end
-    end
-    
-    -- Show recent catches jika ada
-    if #caughtHistory > 0 then
-        addLog("=== RECENT CATCHES ===", Color3.fromRGB(255, 255, 0), "📋")
-        
-        local showCount = math.min(5, #caughtHistory)
-        for i = #caughtHistory, #caughtHistory - showCount + 1, -1 do
-            local catch = caughtHistory[i]
-            if catch then
-                local rarityInfo = rarityMap[tonumber(catch.Rarity)] or {Name = "Unknown", Color = Color3.fromRGB(200, 200, 200)}
-                
-                local info = catch.Time .. " - " .. catch.Name
-                if catch.Weight then
-                    info = info .. " (" .. catch.Weight .. ")"
-                end
-                
-                addLog(info, rarityInfo.Color)
-            end
-        end
-    end
-    
-    StatusLabel.Text = "Catch logger ready"
-end
-
--- TAB 4: SETTINGS
-local function showSettings()
-    clearContent()
-    StatusLabel.Text = "Settings"
-    
-    addLog("=== SETTINGS ===", Color3.fromRGB(0, 255, 200), "⚙️")
-    
-    -- Auto-scan setting
-    local AutoScanFrame = Instance.new("Frame")
-    AutoScanFrame.Size = UDim2.new(0.9, 0, 0, 40)
-    AutoScanFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    AutoScanFrame.Parent = ScrollFrame
-    
-    local AutoScanCorner = Instance.new("UICorner")
-    AutoScanCorner.CornerRadius = UDim.new(0, 6)
-    AutoScanCorner.Parent = AutoScanFrame
-    
-    local AutoScanLabel = Instance.new("TextLabel")
-    AutoScanLabel.Size = UDim2.new(0.7, 0, 1, 0)
-    AutoScanLabel.Position = UDim2.new(0, 10, 0, 0)
-    AutoScanLabel.BackgroundTransparency = 1
-    AutoScanLabel.Text = "🔍 Auto-scan on startup"
-    AutoScanLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-    AutoScanLabel.TextSize = 14
-    AutoScanLabel.Font = Enum.Font.SourceSans
-    AutoScanLabel.TextXAlignment = Enum.TextXAlignment.Left
-    AutoScanLabel.Parent = AutoScanFrame
-    
-    local AutoScanToggle = Instance.new("TextButton")
-    AutoScanToggle.Size = UDim2.new(0.2, 0, 0.6, 0)
-    AutoScanToggle.Position = UDim2.new(0.75, 0, 0.2, 0)
-    AutoScanToggle.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-    AutoScanToggle.Text = "ON"
-    AutoScanToggle.TextColor3 = Color3.new(1, 1, 1)
-    AutoScanToggle.TextSize = 12
-    AutoScanToggle.Font = Enum.Font.SourceSansBold
-    AutoScanToggle.Parent = AutoScanFrame
-    
-    AutoScanToggle.MouseButton1Click:Connect(function()
-        if AutoScanToggle.Text == "ON" then
-            AutoScanToggle.Text = "OFF"
-            AutoScanToggle.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
-        else
-            AutoScanToggle.Text = "ON"
-            AutoScanToggle.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-        end
-    end)
-    
-    -- Info section
-    addLog("=== INFO ===", Color3.fromRGB(200, 200, 255), "📊")
-    
-    addLog("🐟 Fish in database: " .. (next(fishDatabase) and table.count(fishDatabase) or 0), Color3.fromRGB(200, 200, 200))
-    addLog("🎣 Caught history: " .. #caughtHistory, Color3.fromRGB(200, 200, 200))
-    addLog("🎮 Controller: " .. (fishingController and "Loaded" or "Not loaded"), Color3.fromRGB(200, 200, 200))
-    
-    -- Reset buttons
-    local ResetDataBtn = Instance.new("TextButton")
-    ResetDataBtn.Size = UDim2.new(0.8, 0, 0, 35)
-    ResetDataBtn.Position = UDim2.new(0.1, 0, 0, 250)
-    ResetDataBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-    ResetDataBtn.Text = "🔄 Reset All Data"
-    ResetDataBtn.TextColor3 = Color3.new(1, 1, 1)
-    ResetDataBtn.TextSize = 14
-    ResetDataBtn.Font = Enum.Font.SourceSansBold
-    ResetDataBtn.Parent = ScrollFrame
-    
-    local ResetCorner = Instance.new("UICorner")
-    ResetCorner.CornerRadius = UDim.new(0, 8)
-    ResetCorner.Parent = ResetDataBtn
-    
-    ResetDataBtn.MouseButton1Click:Connect(function()
-        fishDatabase = {}
-        caughtHistory = {}
-        addLog("✅ All data reset", Color3.fromRGB(0, 255, 150))
-        StatusLabel.Text = "Data reset"
-        
-        -- Refresh fish database tab
-        if currentTab == "Fish Database" then
-            showFishDatabase()
-        end
-    end)
-    
-    -- Help info
-    addLog("=== HOW TO USE ===", Color3.fromRGB(150, 255, 200), "❓")
-    
-    addLog("1. Go to 'Fish Database' tab", Color3.fromRGB(200, 200, 200))
-    addLog("2. Click 'Scan' to find fish data", Color3.fromRGB(200, 200, 200))
-    addLog("3. Go to 'Catch Logger' tab", Color3.fromRGB(200, 200, 200))
-    addLog("4. Start fishing - catches auto-log", Color3.fromRGB(200, 200, 200))
-    
-    StatusLabel.Text = "Settings loaded"
-end
-
--- Tab switching
-local function switchTab(tabName)
-    currentTab = tabName
-    
-    -- Update tab buttons
-    for name, btn in pairs(tabButtons) do
-        btn.BackgroundColor3 = name == tabName and Color3.fromRGB(0, 120, 180) or Color3.fromRGB(40, 40, 60)
-    end
-    
-    -- Load tab content
-    if tabName == "Fish Database" then
-        showFishDatabase()
-    elseif tabName == "Controller Info" then
-        showControllerInfo()
-    elseif tabName == "Catch Logger" then
-        setupCatchLogger()
-    elseif tabName == "Settings" then
-        showSettings()
-    end
-end
-
--- Button connections
-for tabName, btn in pairs(tabButtons) do
-    btn.MouseButton1Click:Connect(function()
-        switchTab(tabName)
-    end)
-end
-
--- Control buttons
-ScanBtn.MouseButton1Click:Connect(function()
-    scanForFishData()
-end)
-
-ClearBtn.MouseButton1Click:Connect(function()
-    clearContent()
-    addLog("🗑️ Log cleared!", Color3.fromRGB(255, 100, 100))
-    StatusLabel.Text = "Log cleared"
-end)
-
-ExportBtn.MouseButton1Click:Connect(function()
-    addLog("💾 Exporting data...", Color3.fromRGB(100, 255, 100))
-    
-    print("=== FISH DEX EXPORT ===")
-    print("Total fish in database:", next(fishDatabase) and table.count(fishDatabase) or 0)
-    print("Total catches logged:", #caughtHistory)
-    print("Controller loaded:", fishingController and "Yes" or "No")
-    print("======================")
-    
-    -- Export fish database
-    if next(fishDatabase) then
-        print("\n=== FISH DATABASE ===")
-        for name, fish in pairs(fishDatabase) do
-            print(string.format("%s | Rarity: %s (%d) | Weight: %s | Mutation: %s",
-                name, fish.RarityName or "?", fish.Rarity or 0, tostring(fish.Weight or "?"), tostring(fish.Mutation or "None")))
-        end
-    end
-    
-    -- Export catch history
-    if #caughtHistory > 0 then
-        print("\n=== CATCH HISTORY ===")
-        for i, catch in ipairs(caughtHistory) do
-            print(string.format("%s - %s (Rarity: %d, Weight: %s)",
-                catch.Time, catch.Name, catch.Rarity or 0, tostring(catch.Weight or "?")))
-        end
-    end
-    
-    StatusLabel.Text = "Data exported to console"
-end)
-
-DestroyBtn.MouseButton1Click:Connect(function()
-    addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50))
-    StatusLabel.Text = "Status: DESTROYING..."
-    
-    -- Countdown
-    for i = 3, 1, -1 do
-        DestroyBtn.Text = "Destroying in " .. i .. "..."
-        task.wait(1)
-    end
-    
-    -- Restore original function
-    if originalFishCaught and fishingController then
-        pcall(function()
-            fishingController.FishCaught = originalFishCaught
+        -- Right click for options
+        btn.MouseButton2Click:Connect(function()
+            showProperties(child)
+            selectedObject = child
+            entry.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
         end)
     end
     
-    -- Destroy GUI
-    ScreenGui:Destroy()
+    explorerList.CanvasSize = UDim2.new(0, 0, 0, explorerLayout.AbsoluteContentSize.Y + 5)
+end
+
+function showProperties(obj)
+    selectedObject = obj
     
-    print("Fish Dex Explorer destroyed!")
-end)
+    -- Clear properties
+    for _, child in pairs(propertiesPanel:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+    -- Title
+    local titleFrame = Instance.new("Frame")
+    titleFrame.Size = UDim2.new(1, -8, 0, 30)
+    titleFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    titleFrame.BorderSizePixel = 0
+    titleFrame.Parent = propertiesPanel
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 4)
+    titleCorner.Parent = titleFrame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -10, 1, 0)
+    titleLabel.Position = UDim2.new(0, 5, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.Text = "Properties: " .. obj.Name
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 12
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = titleFrame
+    
+    -- Get properties
+    local props = {}
+    for prop, value in pairs(getproperties and getproperties(obj) or {}) do
+        table.insert(props, {name = prop, value = value})
+    end
+    
+    -- Fallback if getproperties not available
+    if #props == 0 then
+        local commonProps = {"Name", "ClassName", "Parent"}
+        for _, prop in pairs(commonProps) do
+            pcall(function()
+                local value = obj[prop]
+                table.insert(props, {name = prop, value = value})
+            end)
+        end
+    end
+    
+    table.sort(props, function(a, b)
+        return a.name < b.name
+    end)
+    
+    -- Show properties
+    for _, prop in pairs(props) do
+        local propFrame = Instance.new("Frame")
+        propFrame.Size = UDim2.new(1, -8, 0, 40)
+        propFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        propFrame.BorderSizePixel = 0
+        propFrame.Parent = propertiesPanel
+        
+        local propCorner = Instance.new("UICorner")
+        propCorner.CornerRadius = UDim.new(0, 4)
+        propCorner.Parent = propFrame
+        
+        local propName = Instance.new("TextLabel")
+        propName.Size = UDim2.new(0.4, 0, 0, 20)
+        propName.Position = UDim2.new(0, 8, 0, 3)
+        propName.BackgroundTransparency = 1
+        propName.TextColor3 = Color3.fromRGB(100, 200, 255)
+        propName.Text = prop.name
+        propName.Font = Enum.Font.GothamBold
+        propName.TextSize = 10
+        propName.TextXAlignment = Enum.TextXAlignment.Left
+        propName.Parent = propFrame
+        
+        local propValue = Instance.new("TextLabel")
+        propValue.Size = UDim2.new(0.6, -16, 1, -6)
+        propValue.Position = UDim2.new(0.4, 0, 0, 3)
+        propValue.BackgroundTransparency = 1
+        propValue.TextColor3 = Color3.fromRGB(200, 200, 220)
+        propValue.Text = tostring(prop.value)
+        propValue.Font = Enum.Font.Code
+        propValue.TextSize = 9
+        propValue.TextXAlignment = Enum.TextXAlignment.Left
+        propValue.TextYAlignment = Enum.TextYAlignment.Top
+        propValue.TextWrapped = true
+        propValue.Parent = propFrame
+    end
+    
+    propertiesPanel.CanvasSize = UDim2.new(0, 0, 0, propLayout.AbsoluteContentSize.Y + 5)
+end
 
--- Auto-start
-addLog("✅ Fish Dex Explorer Loaded!", Color3.fromRGB(0, 255, 200))
-addLog("📌 Click 'Scan' to find fish data", Color3.fromRGB(200, 200, 255))
-addLog("🎣 Go to 'Catch Logger' to log fish catches", Color3.fromRGB(200, 200, 255))
-
--- Start dengan Fish Database tab
-switchTab("Fish Database")
-
--- Auto-scan jika tidak ada data
-task.spawn(function()
-    task.wait(2)
-    if next(fishDatabase) == nil then
-        addLog("🔍 No fish data found. Auto-scanning...", Color3.fromRGB(255, 200, 100))
-        scanForFishData()
+-- Back button
+backBtn.MouseButton1Click:Connect(function()
+    if #currentPath > 0 then
+        local parent = table.remove(currentPath)
+        updateExplorer(parent)
     end
 end)
 
-print("Fish Dex Explorer - General Version Loaded!")
-print("No event monitoring - Focus on fish data only")
+-- ============================================
+-- TAB 2: EVENT SPY
+-- ============================================
+local spyContent = createTab("RemoteSpy", "📡", nil)
+
+-- Controls
+local spyControls = Instance.new("Frame")
+spyControls.Size = UDim2.new(1, 0, 0, 35)
+spyControls.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+spyControls.BorderSizePixel = 0
+spyControls.Parent = spyContent
+
+local spyCorner = Instance.new("UICorner")
+spyCorner.CornerRadius = UDim.new(0, 6)
+spyCorner.Parent = spyControls
+
+local startSpyBtn = Instance.new("TextButton")
+startSpyBtn.Size = UDim2.new(0, 100, 0, 28)
+startSpyBtn.Position = UDim2.new(0, 5, 0, 3.5)
+startSpyBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+startSpyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+startSpyBtn.Text = "▶ Start Spy"
+startSpyBtn.Font = Enum.Font.GothamBold
+startSpyBtn.TextSize = 11
+startSpyBtn.BorderSizePixel = 0
+startSpyBtn.Parent = spyControls
+
+local startCorner = Instance.new("UICorner")
+startCorner.CornerRadius = UDim.new(0, 4)
+startCorner.Parent = startSpyBtn
+
+local clearLogsBtn = Instance.new("TextButton")
+clearLogsBtn.Size = UDim2.new(0, 100, 0, 28)
+clearLogsBtn.Position = UDim2.new(0, 110, 0, 3.5)
+clearLogsBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 50)
+clearLogsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+clearLogsBtn.Text = "🗑️ Clear"
+clearLogsBtn.Font = Enum.Font.GothamBold
+clearLogsBtn.TextSize = 11
+clearLogsBtn.BorderSizePixel = 0
+clearLogsBtn.Parent = spyControls
+
+local clearCorner = Instance.new("UICorner")
+clearCorner.CornerRadius = UDim.new(0, 4)
+clearCorner.Parent = clearLogsBtn
+
+-- Event logs
+local eventLogsList = Instance.new("ScrollingFrame")
+eventLogsList.Size = UDim2.new(1, 0, 1, -40)
+eventLogsList.Position = UDim2.new(0, 0, 0, 40)
+eventLogsList.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+eventLogsList.BorderSizePixel = 0
+eventLogsList.ScrollBarThickness = 6
+eventLogsList.CanvasSize = UDim2.new(0, 0, 0, 0)
+eventLogsList.Parent = spyContent
+
+local logsCorner = Instance.new("UICorner")
+logsCorner.CornerRadius = UDim.new(0, 6)
+logsCorner.Parent = eventLogsList
+
+local logsLayout = Instance.new("UIListLayout")
+logsLayout.Padding = UDim.new(0, 3)
+logsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+logsLayout.Parent = eventLogsList
+
+-- Spy functions
+local spying = false
+
+local function addEventLog(eventName, eventPath, args)
+    local log = Instance.new("Frame")
+    log.Size = UDim2.new(1, -8, 0, 80)
+    log.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    log.BorderSizePixel = 0
+    log.LayoutOrder = -tick()
+    log.Parent = eventLogsList
+    
+    local logCorner = Instance.new("UICorner")
+    logCorner.CornerRadius = UDim.new(0, 4)
+    logCorner.Parent = log
+    
+    local timeLabel = Instance.new("TextLabel")
+    timeLabel.Size = UDim2.new(0, 70, 0, 16)
+    timeLabel.Position = UDim2.new(0, 5, 0, 3)
+    timeLabel.BackgroundTransparency = 1
+    timeLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+    timeLabel.Text = os.date("%H:%M:%S")
+    timeLabel.Font = Enum.Font.Code
+    timeLabel.TextSize = 9
+    timeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    timeLabel.Parent = log
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, -80, 0, 18)
+    nameLabel.Position = UDim2.new(0, 5, 0, 20)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    nameLabel.Text = "📡 " .. eventName
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 12
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    nameLabel.Parent = log
+    
+    local pathLabel = Instance.new("TextLabel")
+    pathLabel.Size = UDim2.new(1, -10, 0, 14)
+    pathLabel.Position = UDim2.new(0, 5, 0, 38)
+    pathLabel.BackgroundTransparency = 1
+    pathLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+    pathLabel.Text = eventPath
+    pathLabel.Font = Enum.Font.Code
+    pathLabel.TextSize = 8
+    pathLabel.TextXAlignment = Enum.TextXAlignment.Left
+    pathLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    pathLabel.Parent = log
+    
+    local argsLabel = Instance.new("TextLabel")
+    argsLabel.Size = UDim2.new(1, -10, 0, 22)
+    argsLabel.Position = UDim2.new(0, 5, 0, 54)
+    argsLabel.BackgroundTransparency = 1
+    argsLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    local argsStr = "Args: "
+    pcall(function()
+        argsStr = argsStr .. HttpService:JSONEncode(args)
+    end)
+    if argsStr == "Args: " then
+        argsStr = argsStr .. tostring(args)
+    end
+    
+    argsLabel.Text = argsStr:sub(1, 200)
+    argsLabel.Font = Enum.Font.Code
+    argsLabel.TextSize = 9
+    argsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    argsLabel.TextYAlignment = Enum.TextYAlignment.Top
+    argsLabel.TextWrapped = true
+    argsLabel.Parent = log
+    
+    eventLogsList.CanvasSize = UDim2.new(0, 0, 0, logsLayout.AbsoluteContentSize.Y)
+    eventLogsList.CanvasPosition = Vector2.new(0, eventLogsList.CanvasSize.Y.Offset)
+end
+
+local function startSpying()
+    spying = true
+    startSpyBtn.Text = "⏸ Stop Spy"
+    startSpyBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 50)
+    
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj:IsA("RemoteEvent") then
+            pcall(function()
+                local conn = obj.OnClientEvent:Connect(function(...)
+                    if spying then
+                        local args = {...}
+                        addEventLog(obj.Name, obj:GetFullName(), args)
+                        table.insert(eventLogs, {
+                            event = obj:GetFullName(),
+                            args = args,
+                            time = os.time()
+                        })
+                    end
+                end)
+                spyingEvents[obj] = conn
+            end)
+        end
+    end
+    
+    print("🔍 Spying on", #spyingEvents, "RemoteEvents")
+end
+
+local function stopSpying()
+    spying = false
+    startSpyBtn.Text = "▶ Start Spy"
+    startSpyBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+    
+    for obj, conn in pairs(spyingEvents) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+    spyingEvents = {}
+end
+
+startSpyBtn.MouseButton1Click:Connect(function()
+    if spying then
+        stopSpying()
+    else
+        startSpying()
+    end
+end)
+
+clearLogsBtn.MouseButton1Click:Connect(function()
+    for _, child in pairs(eventLogsList:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    eventLogs = {}
+end)
+
+-- ============================================
+-- TAB 3: EXPORT
+-- ============================================
+local exportContent = createTab("Export", "📤", nil)
+
+-- Export options
+local exportFrame = Instance.new("Frame")
+exportFrame.Size = UDim2.new(1, -10, 0, 100)
+exportFrame.Position = UDim2.new(0, 5, 0, 5)
+exportFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+exportFrame.BorderSizePixel = 0
+exportFrame.Parent = exportContent
+
+local exportCorner = Instance.new("UICorner")
+exportCorner.CornerRadius = UDim.new(0, 6)
+exportCorner.Parent = exportFrame
+
+local exportTitle = Instance.new("TextLabel")
+exportTitle.Size = UDim2.new(1, -10, 0, 25)
+exportTitle.Position = UDim2.new(0, 5, 0, 5)
+exportTitle.BackgroundTransparency = 1
+exportTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+exportTitle.Text = "📤 Export ReplicatedStorage Structure"
+exportTitle.Font = Enum.Font.GothamBold
+exportTitle.TextSize = 14
+exportTitle.Parent = exportFrame
+
+local exportDesc = Instance.new("TextLabel")
+exportDesc.Size = UDim2.new(1, -10, 0, 35)
+exportDesc.Position = UDim2.new(0, 5, 0, 30)
+exportDesc.BackgroundTransparency = 1
+exportDesc.TextColor3 = Color3.fromRGB(180, 180, 200)
+exportDesc.Text = "Export full tree structure of ReplicatedStorage to clipboard.\nIncludes: All children, properties, and paths."
+exportDesc.Font = Enum.Font.Gotham
+exportDesc.TextSize = 11
+exportDesc.TextWrapped = true
+exportDesc.TextXAlignment = Enum.TextXAlignment.Left
+exportDesc.TextYAlignment = Enum.TextYAlignment.Top
+exportDesc.Parent = exportFrame
+
+-- Export buttons
+local exportRSBtn = Instance.new("TextButton")
+exportRSBtn.Size = UDim2.new(0, 200, 0, 30)
+exportRSBtn.Position = UDim2.new(0, 10, 0, 70)
+exportRSBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+exportRSBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+exportRSBtn.Text = "📋 Export ReplicatedStorage"
+exportRSBtn.Font = Enum.Font.GothamBold
+exportRSBtn.TextSize = 12
+exportRSBtn.BorderSizePixel = 0
+exportRSBtn.Parent = exportFrame
+
+local exportRSCorner = Instance.new("UICorner")
+exportRSCorner.CornerRadius = UDim.new(0, 6)
+exportRSCorner.Parent = exportRSBtn
+
+local exportWSBtn = Instance.new("TextButton")
+exportWSBtn.Size = UDim2.new(0, 200, 0, 30)
+exportWSBtn.Position = UDim2.new(0, 220, 0, 70)
+exportWSBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+exportWSBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+exportWSBtn.Text = "📋 Export Workspace"
+exportWSBtn.Font = Enum.Font.GothamBold
+exportWSBtn.TextSize = 12
+exportWSBtn.BorderSizePixel = 0
+exportWSBtn.Parent = exportFrame
+
+local exportWSCorner = Instance.new("UICorner")
+exportWSCorner.CornerRadius = UDim.new(0, 6)
+exportWSCorner.Parent = exportWSBtn
+
+local exportCurrentBtn = Instance.new("TextButton")
+exportCurrentBtn.Size = UDim2.new(0, 200, 0, 30)
+exportCurrentBtn.Position = UDim2.new(0, 430, 0, 70)
+exportCurrentBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+exportCurrentBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+exportCurrentBtn.Text = "📋 Export Selected Object"
+exportCurrentBtn.Font = Enum.Font.GothamBold
+exportCurrentBtn.TextSize = 12
+exportCurrentBtn.BorderSizePixel = 0
+exportCurrentBtn.Parent = exportFrame
+
+local exportCurrentCorner = Instance.new("UICorner")
+exportCurrentCorner.CornerRadius = UDim.new(0, 6)
+exportCurrentCorner.Parent = exportCurrentBtn
+
+-- Export preview
+local exportPreview = Instance.new("ScrollingFrame")
+exportPreview.Size = UDim2.new(1, -10, 1, -115)
+exportPreview.Position = UDim2.new(0, 5, 0, 110)
+exportPreview.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+exportPreview.BorderSizePixel = 0
+exportPreview.ScrollBarThickness = 6
+exportPreview.CanvasSize = UDim2.new(0, 0, 0, 0)
+exportPreview.Parent = exportContent
+
+local previewCorner = Instance.new("UICorner")
+previewCorner.CornerRadius = UDim.new(0, 6)
+previewCorner.Parent = exportPreview
+
+local previewLabel = Instance.new("TextLabel")
+previewLabel.Size = UDim2.new(1, -10, 1, 0)
+previewLabel.Position = UDim2.new(0, 5, 0, 5)
+previewLabel.BackgroundTransparency = 1
+previewLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+previewLabel.Text = "Click export button to see preview..."
+previewLabel.Font = Enum.Font.Code
+previewLabel.TextSize = 10
+previewLabel.TextXAlignment = Enum.TextXAlignment.Left
+previewLabel.TextYAlignment = Enum.TextYAlignment.Top
+previewLabel.TextWrapped = true
+previewLabel.Parent = exportPreview
+
+-- Export functions
+local function exportObject(obj, indent)
+    indent = indent or 0
+    local result = ""
+    local prefix = string.rep("  ", indent)
+    
+    -- Object info
+    result = result .. prefix .. getIcon(obj) .. " " .. obj.Name .. " (" .. obj.ClassName .. ")\n"
+    
+    -- Add important properties
+    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+        result = result .. prefix .. "  📍 Path: " .. obj:GetFullName() .. "\n"
+    end
+    
+    -- Recursively add children
+    local children = obj:GetChildren()
+    table.sort(children, function(a, b) return a.Name < b.Name end)
+    
+    for _, child in pairs(children) do
+        result = result .. exportObject(child, indent + 1)
+    end
+    
+    return result
+end
+
+local function exportToJSON(obj)
+    local function buildTree(o)
+        local node = {
+            Name = o.Name,
+            ClassName = o.ClassName,
+            Path = o:GetFullName(),
+            Children = {}
+        }
+        
+        for _, child in pairs(o:GetChildren()) do
+            table.insert(node.Children, buildTree(child))
+        end
+        
+        return node
+    end
+    
+    local tree = buildTree(obj)
+    return HttpService:JSONEncode(tree)
+end
+
+exportRSBtn.MouseButton1Click:Connect(function()
+    exportRSBtn.Text = "⏳ Exporting..."
+    
+    task.spawn(function()
+        local export = "╔═══════════════════════════════════════════════╗\n"
+        export = export .. "║   ReplicatedStorage Structure Export        ║\n"
+        export = export .. "║   Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "             ║\n"
+        export = export .. "╚═══════════════════════════════════════════════╝\n\n"
+        
+        export = export .. exportObject(ReplicatedStorage)
+        
+        -- Try to copy to clipboard
+        pcall(function()
+            setclipboard(export)
+        end)
+        
+        -- Show preview
+        previewLabel.Text = export
+        exportPreview.CanvasSize = UDim2.new(0, 0, 0, previewLabel.TextBounds.Y + 10)
+        
+        exportRSBtn.Text = "✅ Copied!"
+        task.wait(1.5)
+        exportRSBtn.Text = "📋 Export ReplicatedStorage"
+    end)
+end)
+
+exportWSBtn.MouseButton1Click:Connect(function()
+    exportWSBtn.Text = "⏳ Exporting..."
+    
+    task.spawn(function()
+        local export = "╔═══════════════════════════════════════════════╗\n"
+        export = export .. "║   Workspace Structure Export                ║\n"
+        export = export .. "║   Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "             ║\n"
+        export = export .. "╚═══════════════════════════════════════════════╝\n\n"
+        
+        -- Only export first level to avoid huge output
+        for _, child in pairs(Workspace:GetChildren()) do
+            export = export .. exportObject(child, 0)
+        end
+        
+        pcall(function()
+            setclipboard(export)
+        end)
+        
+        previewLabel.Text = export
+        exportPreview.CanvasSize = UDim2.new(0, 0, 0, previewLabel.TextBounds.Y + 10)
+        
+        exportWSBtn.Text = "✅ Copied!"
+        task.wait(1.5)
+        exportWSBtn.Text = "📋 Export Workspace"
+    end)
+end)
+
+exportCurrentBtn.MouseButton1Click:Connect(function()
+    if not selectedObject then
+        exportCurrentBtn.Text = "⚠️ Select object first!"
+        task.wait(1.5)
+        exportCurrentBtn.Text = "📋 Export Selected Object"
+        return
+    end
+    
+    exportCurrentBtn.Text = "⏳ Exporting..."
+    
+    task.spawn(function()
+        local export = "╔═══════════════════════════════════════════════╗\n"
+        export = export .. "║   Object Export: " .. selectedObject.Name .. string.rep(" ", 28 - #selectedObject.Name) .. "║\n"
+        export = export .. "║   Type: " .. selectedObject.ClassName .. string.rep(" ", 35 - #selectedObject.ClassName) .. "║\n"
+        export = export .. "║   Path: " .. selectedObject:GetFullName():sub(1, 35) .. string.rep(" ", math.max(0, 35 - #selectedObject:GetFullName())) .. "║\n"
+        export = export .. "╚═══════════════════════════════════════════════╝\n\n"
+        
+        export = export .. exportObject(selectedObject)
+        
+        pcall(function()
+            setclipboard(export)
+        end)
+        
+        previewLabel.Text = export
+        exportPreview.CanvasSize = UDim2.new(0, 0, 0, previewLabel.TextBounds.Y + 10)
+        
+        exportCurrentBtn.Text = "✅ Copied!"
+        task.wait(1.5)
+        exportCurrentBtn.Text = "📋 Export Selected Object"
+    end)
+end)
+
+-- ============================================
+-- TAB 4: SCRIPTS
+-- ============================================
+local scriptsContent = createTab("Scripts", "📜", nil)
+
+local scriptsList = Instance.new("ScrollingFrame")
+scriptsList.Size = UDim2.new(1, 0, 1, 0)
+scriptsList.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+scriptsList.BorderSizePixel = 0
+scriptsList.ScrollBarThickness = 6
+scriptsList.CanvasSize = UDim2.new(0, 0, 0, 0)
+scriptsList.Parent = scriptsContent
+
+local scriptsCorner = Instance.new("UICorner")
+scriptsCorner.CornerRadius = UDim.new(0, 6)
+scriptsCorner.Parent = scriptsList
+
+local scriptsLayout = Instance.new("UIListLayout")
+scriptsLayout.Padding = UDim.new(0, 3)
+scriptsLayout.SortOrder = Enum.SortOrder.Name
+scriptsLayout.Parent = scriptsList
+
+-- Find all scripts
+local function scanScripts()
+    for _, child in pairs(scriptsList:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj:IsA("LocalScript") or obj:IsA("Script") or obj:IsA("ModuleScript") then
+            local entry = Instance.new("Frame")
+            entry.Size = UDim2.new(1, -8, 0, 50)
+            entry.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+            entry.BorderSizePixel = 0
+            entry.Parent = scriptsList
+            
+            local entryCorner = Instance.new("UICorner")
+            entryCorner.CornerRadius = UDim.new(0, 4)
+            entryCorner.Parent = entry
+            
+            local icon = obj:IsA("LocalScript") and "📝" or (obj:IsA("Script") and "📄" or "📜")
+            
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, -10, 0, 20)
+            nameLabel.Position = UDim2.new(0, 5, 0, 3)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+            nameLabel.Text = icon .. " " .. obj.Name
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.TextSize = 12
+            nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+            nameLabel.Parent = entry
+            
+            local pathLabel = Instance.new("TextLabel")
+            pathLabel.Size = UDim2.new(1, -10, 0, 14)
+            pathLabel.Position = UDim2.new(0, 5, 0, 23)
+            pathLabel.BackgroundTransparency = 1
+            pathLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+            pathLabel.Text = obj:GetFullName()
+            pathLabel.Font = Enum.Font.Code
+            pathLabel.TextSize = 9
+            pathLabel.TextXAlignment = Enum.TextXAlignment.Left
+            pathLabel.TextTruncate = Enum.TextTruncate.AtEnd
+            pathLabel.Parent = entry
+            
+            local statusLabel = Instance.new("TextLabel")
+            statusLabel.Size = UDim2.new(1, -10, 0, 12)
+            statusLabel.Position = UDim2.new(0, 5, 0, 37)
+            statusLabel.BackgroundTransparency = 1
+            statusLabel.TextColor3 = obj.Disabled and Color3.fromRGB(200, 80, 80) or Color3.fromRGB(80, 200, 80)
+            statusLabel.Text = obj.Disabled and "⏸️ Disabled" or "▶️ Enabled"
+            statusLabel.Font = Enum.Font.Gotham
+            statusLabel.TextSize = 9
+            statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+            statusLabel.Parent = entry
+        end
+    end
+    
+    scriptsList.CanvasSize = UDim2.new(0, 0, 0, scriptsLayout.AbsoluteContentSize.Y)
+end
+
+tabs["Scripts"].activate = scanScripts
+
+-- ============================================
+-- INITIALIZE
+-- ============================================
+-- Activate first tab
+tabs["Explorer"].tab.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+tabs["Explorer"].tab.TextColor3 = Color3.fromRGB(255, 255, 255)
+tabs["Explorer"].content.Visible = true
+updateExplorer(game)
+
+-- Close button
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+    stopSpying()
+    getgenv().AdvancedDex = false
+end)
+
+-- Minimize button
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    
+    if minimized then
+        mainFrame.Size = UDim2.new(0, 850, 0, 40)
+        contentFrame.Visible = false
+        tabBar.Visible = false
+        minBtn.Text = "+"
+    else
+        mainFrame.Size = UDim2.new(0, 850, 0, 600)
+        contentFrame.Visible = true
+        tabBar.Visible = true
+        minBtn.Text = "—"
+    end
+end)
+
+-- Notification
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "🔍 Dex Explorer",
+        Text = "Loaded! Browse, spy, and export objects",
+        Duration = 4
+    })
+end)
+
+print("════════════════════════════════")
+print("🔍 Advanced Dex Explorer Loaded")
+print("════════════════════════════════")
+print("Features:")
+print("  📁 Explorer - Browse all objects")
+print("  📡 RemoteSpy - Monitor events")
+print("  📤 Export - Copy structure to clipboard")
+print("  📜 Scripts - View all scripts")
+print("")
+print("Commands:")
+print("  getgenv().AdvancedDex - Check if running")
+print("════════════════════════════════")
