@@ -877,7 +877,6 @@ local Corner = Instance.new("UICorner")
 Corner.CornerRadius = UDim.new(0, 6)
 Corner.Parent = ExportBtn
 
--- Event klik tombol Export
 ExportBtn.MouseButton1Click:Connect(function()
     if next(fishDatabase) == nil then
         addLog("❌ Tidak ada data untuk diekspor!", Color3.fromRGB(255, 100, 100))
@@ -887,9 +886,9 @@ ExportBtn.MouseButton1Click:Connect(function()
 
     -- Buat string teks biasa
     local exportText = "=== FISH DATABASE EXPORT ===\n"
-    for _, fish in pairs(fishDatabase) do
+    for name, fish in pairs(fishDatabase) do
         exportText = exportText ..
-            "🐟 " .. (fish.Name or "?") ..
+            "🐟 " .. (fish.Name or name) ..
             " | Rarity: " .. (fish.RarityName or "?") ..
             (fish.Weight and (" | Weight: " .. tostring(fish.Weight)) or "") ..
             (fish.Mutation and fish.Mutation ~= "None" and (" | Mutation: " .. tostring(fish.Mutation)) or "") ..
@@ -901,7 +900,7 @@ ExportBtn.MouseButton1Click:Connect(function()
     -- Tampilkan di TextBox
     toggleClipboardText(true, exportText)
 
-    -- Coba salin ke clipboard (berfungsi di Roblox Studio)
+    -- Salin ke clipboard (berfungsi di Roblox Studio)
     local success = pcall(function()
         setclipboard(exportText)
     end)
@@ -914,6 +913,7 @@ ExportBtn.MouseButton1Click:Connect(function()
         StatusLabel.Text = "Exported to textbox only"
     end
 end)
+
 
 
 DestroyBtn.MouseButton1Click:Connect(function()
