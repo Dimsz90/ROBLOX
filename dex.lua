@@ -198,7 +198,7 @@ pathCorner.CornerRadius = UDim.new(0, 6)
 pathCorner.Parent = pathBar
 
 local pathLabel = Instance.new("TextLabel")
-pathLabel.Size = UDim2.new(1, -80, 1, 0)
+pathLabel.Size = UDim2.new(1, -150, 1, 0)
 pathLabel.Position = UDim2.new(0, 10, 0, 0)
 pathLabel.BackgroundTransparency = 1
 pathLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
@@ -207,6 +207,22 @@ pathLabel.TextSize = 11
 pathLabel.TextXAlignment = Enum.TextXAlignment.Left
 pathLabel.Text = "game"
 pathLabel.Parent = pathBar
+
+-- Export current view button
+local exportViewBtn = Instance.new("TextButton")
+exportViewBtn.Size = UDim2.new(0, 70, 0, 24)
+exportViewBtn.Position = UDim2.new(1, -140, 0, 3)
+exportViewBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+exportViewBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+exportViewBtn.Text = "📋 Copy"
+exportViewBtn.Font = Enum.Font.Gotham
+exportViewBtn.TextSize = 10
+exportViewBtn.BorderSizePixel = 0
+exportViewBtn.Parent = pathBar
+
+local exportViewCorner = Instance.new("UICorner")
+exportViewCorner.CornerRadius = UDim.new(0, 4)
+exportViewCorner.Parent = exportViewBtn
 
 -- Back button
 local backBtn = Instance.new("TextButton")
@@ -341,6 +357,13 @@ function updateExplorer(obj)
         
         -- Right click for options
         btn.MouseButton2Click:Connect(function()
+            -- Reset all entries
+            for _, e in pairs(explorerList:GetChildren()) do
+                if e:IsA("Frame") then
+                    e.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+                end
+            end
+            
             showProperties(child)
             selectedObject = child
             entry.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
@@ -360,9 +383,9 @@ function showProperties(obj)
         end
     end
     
-    -- Title
+    -- Title with copy button
     local titleFrame = Instance.new("Frame")
-    titleFrame.Size = UDim2.new(1, -8, 0, 30)
+    titleFrame.Size = UDim2.new(1, -8, 0, 35)
     titleFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     titleFrame.BorderSizePixel = 0
     titleFrame.Parent = propertiesPanel
@@ -372,7 +395,7 @@ function showProperties(obj)
     titleCorner.Parent = titleFrame
     
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -10, 1, 0)
+    titleLabel.Size = UDim2.new(1, -80, 1, 0)
     titleLabel.Position = UDim2.new(0, 5, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -381,6 +404,22 @@ function showProperties(obj)
     titleLabel.TextSize = 12
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = titleFrame
+    
+    -- Copy properties button
+    local copyPropBtn = Instance.new("TextButton")
+    copyPropBtn.Size = UDim2.new(0, 70, 0, 28)
+    copyPropBtn.Position = UDim2.new(1, -73, 0, 3.5)
+    copyPropBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+    copyPropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyPropBtn.Text = "📋 Copy"
+    copyPropBtn.Font = Enum.Font.Gotham
+    copyPropBtn.TextSize = 10
+    copyPropBtn.BorderSizePixel = 0
+    copyPropBtn.Parent = titleFrame
+    
+    local copyPropCorner = Instance.new("UICorner")
+    copyPropCorner.CornerRadius = UDim.new(0, 4)
+    copyPropCorner.Parent = copyPropBtn
     
     -- Get properties
     local props = {}
@@ -401,6 +440,24 @@ function showProperties(obj)
     
     table.sort(props, function(a, b)
         return a.name < b.name
+    end)
+    
+    -- Copy properties function
+    copyPropBtn.MouseButton1Click:Connect(function()
+        local export = "-- Properties of: " .. obj:GetFullName() .. "\n"
+        export = export .. "-- Class: " .. obj.ClassName .. "\n\n"
+        
+        for _, prop in pairs(props) do
+            export = export .. prop.name .. " = " .. tostring(prop.value) .. "\n"
+        end
+        
+        pcall(function()
+            setclipboard(export)
+        end)
+        
+        copyPropBtn.Text = "✅ Copied"
+        task.wait(1)
+        copyPropBtn.Text = "📋 Copy"
     end)
     
     -- Show properties
@@ -451,6 +508,49 @@ backBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Export current view button
+exportViewBtn.MouseButton1Click:Connect(function()
+    exportViewBtn.Text = "⏳..."
+    
+    task.spawn(function()
+        local function exportObjectDetailed(o, indent)
+            indent = indent or 0
+            local result = ""
+            local prefix = string.rep("  ", indent)
+            
+            result = result .. prefix .. "-- " .. getIcon(o) .. " " .. o.Name .. " (" .. o.ClassName .. ")\n"
+            result = result .. prefix .. "-- Path: " .. o:GetFullName() .. "\n"
+            
+            -- Important properties for scripting
+            if o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
+                result = result .. prefix .. "local " .. o.Name .. " = " .. o:GetFullName() .. "\n"
+            end
+            
+            result = result .. "\n"
+            return result
+        end
+        
+        local export = "-- Explorer View Export\n"
+        export = export .. "-- Current Object: " .. currentObject:GetFullName() .. "\n"
+        export = export .. "-- Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n"
+        
+        local children = currentObject:GetChildren()
+        table.sort(children, function(a, b) return a.Name < b.Name end)
+        
+        for _, child in pairs(children) do
+            export = export .. exportObjectDetailed(child, 0)
+        end
+        
+        pcall(function()
+            setclipboard(export)
+        end)
+        
+        exportViewBtn.Text = "✅"
+        task.wait(1)
+        exportViewBtn.Text = "📋 Copy"
+    end)
+end)
+
 -- ============================================
 -- TAB 2: EVENT SPY
 -- ============================================
@@ -497,6 +597,21 @@ local clearCorner = Instance.new("UICorner")
 clearCorner.CornerRadius = UDim.new(0, 4)
 clearCorner.Parent = clearLogsBtn
 
+local exportLogsBtn = Instance.new("TextButton")
+exportLogsBtn.Size = UDim2.new(0, 120, 0, 28)
+exportLogsBtn.Position = UDim2.new(0, 215, 0, 3.5)
+exportLogsBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+exportLogsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+exportLogsBtn.Text = "📋 Export Logs"
+exportLogsBtn.Font = Enum.Font.GothamBold
+exportLogsBtn.TextSize = 11
+exportLogsBtn.BorderSizePixel = 0
+exportLogsBtn.Parent = spyControls
+
+local exportLogsCorner = Instance.new("UICorner")
+exportLogsCorner.CornerRadius = UDim.new(0, 4)
+exportLogsCorner.Parent = exportLogsBtn
+
 -- Event logs
 local eventLogsList = Instance.new("ScrollingFrame")
 eventLogsList.Size = UDim2.new(1, 0, 1, -40)
@@ -521,7 +636,7 @@ local spying = false
 
 local function addEventLog(eventName, eventPath, args)
     local log = Instance.new("Frame")
-    log.Size = UDim2.new(1, -8, 0, 80)
+    log.Size = UDim2.new(1, -8, 0, 100)
     log.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
     log.BorderSizePixel = 0
     log.LayoutOrder = -tick()
@@ -567,7 +682,7 @@ local function addEventLog(eventName, eventPath, args)
     pathLabel.Parent = log
     
     local argsLabel = Instance.new("TextLabel")
-    argsLabel.Size = UDim2.new(1, -10, 0, 22)
+    argsLabel.Size = UDim2.new(1, -10, 0, 40)
     argsLabel.Position = UDim2.new(0, 5, 0, 54)
     argsLabel.BackgroundTransparency = 1
     argsLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
@@ -580,7 +695,7 @@ local function addEventLog(eventName, eventPath, args)
         argsStr = argsStr .. tostring(args)
     end
     
-    argsLabel.Text = argsStr:sub(1, 200)
+    argsLabel.Text = argsStr:sub(1, 300)
     argsLabel.Font = Enum.Font.Code
     argsLabel.TextSize = 9
     argsLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -649,6 +764,53 @@ clearLogsBtn.MouseButton1Click:Connect(function()
     eventLogs = {}
 end)
 
+-- Export logs function
+exportLogsBtn.MouseButton1Click:Connect(function()
+    if #eventLogs == 0 then
+        exportLogsBtn.Text = "⚠️ No logs"
+        task.wait(1)
+        exportLogsBtn.Text = "📋 Export Logs"
+        return
+    end
+    
+    exportLogsBtn.Text = "⏳ Exporting..."
+    
+    task.spawn(function()
+        local export = "-- RemoteSpy Event Logs\n"
+        export = export .. "-- Total Events: " .. #eventLogs .. "\n"
+        export = export .. "-- Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n"
+        
+        for i, log in ipairs(eventLogs) do
+            export = export .. "-- Event #" .. i .. "\n"
+            export = export .. "-- Time: " .. os.date("%H:%M:%S", log.time) .. "\n"
+            export = export .. "-- Remote: " .. log.event .. "\n"
+            export = export .. "-- Args: "
+            
+            local argsStr = ""
+            pcall(function()
+                argsStr = HttpService:JSONEncode(log.args)
+            end)
+            if argsStr == "" then
+                argsStr = tostring(log.args)
+            end
+            
+            export = export .. argsStr .. "\n\n"
+            export = export .. "-- Example usage:\n"
+            export = export .. "local remote = " .. log.event .. "\n"
+            export = export .. "remote:FireServer(" .. argsStr .. ")\n\n"
+            export = export .. string.rep("-", 50) .. "\n\n"
+        end
+        
+        pcall(function()
+            setclipboard(export)
+        end)
+        
+        exportLogsBtn.Text = "✅ Copied!"
+        task.wait(1.5)
+        exportLogsBtn.Text = "📋 Export Logs"
+    end)
+end)
+
 -- ============================================
 -- TAB 3: EXPORT
 -- ============================================
@@ -671,7 +833,7 @@ exportTitle.Size = UDim2.new(1, -10, 0, 25)
 exportTitle.Position = UDim2.new(0, 5, 0, 5)
 exportTitle.BackgroundTransparency = 1
 exportTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-exportTitle.Text = "📤 Export ReplicatedStorage Structure"
+exportTitle.Text = "📤 Export Game Structure"
 exportTitle.Font = Enum.Font.GothamBold
 exportTitle.TextSize = 14
 exportTitle.Parent = exportFrame
@@ -681,7 +843,7 @@ exportDesc.Size = UDim2.new(1, -10, 0, 35)
 exportDesc.Position = UDim2.new(0, 5, 0, 30)
 exportDesc.BackgroundTransparency = 1
 exportDesc.TextColor3 = Color3.fromRGB(180, 180, 200)
-exportDesc.Text = "Export full tree structure of ReplicatedStorage to clipboard.\nIncludes: All children, properties, and paths."
+exportDesc.Text = "Export full tree structure to clipboard for scripting reference.\nIncludes: All children, properties, and paths."
 exportDesc.Font = Enum.Font.Gotham
 exportDesc.TextSize = 11
 exportDesc.TextWrapped = true
@@ -768,15 +930,13 @@ local function exportObject(obj, indent)
     local result = ""
     local prefix = string.rep("  ", indent)
     
-    -- Object info
-    result = result .. prefix .. getIcon(obj) .. " " .. obj.Name .. " (" .. obj.ClassName .. ")\n"
+    result = result .. prefix .. "-- " .. getIcon(obj) .. " " .. obj.Name .. " (" .. obj.ClassName .. ")\n"
+    result = result .. prefix .. "-- Path: " .. obj:GetFullName() .. "\n"
     
-    -- Add important properties
     if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-        result = result .. prefix .. "  📍 Path: " .. obj:GetFullName() .. "\n"
+        result = result .. prefix .. "local " .. obj.Name .. " = " .. obj:GetFullName() .. "\n"
     end
     
-    -- Recursively add children
     local children = obj:GetChildren()
     table.sort(children, function(a, b) return a.Name < b.Name end)
     
@@ -787,43 +947,19 @@ local function exportObject(obj, indent)
     return result
 end
 
-local function exportToJSON(obj)
-    local function buildTree(o)
-        local node = {
-            Name = o.Name,
-            ClassName = o.ClassName,
-            Path = o:GetFullName(),
-            Children = {}
-        }
-        
-        for _, child in pairs(o:GetChildren()) do
-            table.insert(node.Children, buildTree(child))
-        end
-        
-        return node
-    end
-    
-    local tree = buildTree(obj)
-    return HttpService:JSONEncode(tree)
-end
-
 exportRSBtn.MouseButton1Click:Connect(function()
     exportRSBtn.Text = "⏳ Exporting..."
     
     task.spawn(function()
-        local export = "╔═══════════════════════════════════════════════╗\n"
-        export = export .. "║   ReplicatedStorage Structure Export        ║\n"
-        export = export .. "║   Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "             ║\n"
-        export = export .. "╚═══════════════════════════════════════════════╝\n\n"
+        local export = "-- ReplicatedStorage Structure Export\n"
+        export = export .. "-- Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n"
         
         export = export .. exportObject(ReplicatedStorage)
         
-        -- Try to copy to clipboard
         pcall(function()
             setclipboard(export)
         end)
         
-        -- Show preview
         previewLabel.Text = export
         exportPreview.CanvasSize = UDim2.new(0, 0, 0, previewLabel.TextBounds.Y + 10)
         
@@ -837,12 +973,9 @@ exportWSBtn.MouseButton1Click:Connect(function()
     exportWSBtn.Text = "⏳ Exporting..."
     
     task.spawn(function()
-        local export = "╔═══════════════════════════════════════════════╗\n"
-        export = export .. "║   Workspace Structure Export                ║\n"
-        export = export .. "║   Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "             ║\n"
-        export = export .. "╚═══════════════════════════════════════════════╝\n\n"
+        local export = "-- Workspace Structure Export\n"
+        export = export .. "-- Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n"
         
-        -- Only export first level to avoid huge output
         for _, child in pairs(Workspace:GetChildren()) do
             export = export .. exportObject(child, 0)
         end
@@ -871,11 +1004,9 @@ exportCurrentBtn.MouseButton1Click:Connect(function()
     exportCurrentBtn.Text = "⏳ Exporting..."
     
     task.spawn(function()
-        local export = "╔═══════════════════════════════════════════════╗\n"
-        export = export .. "║   Object Export: " .. selectedObject.Name .. string.rep(" ", 28 - #selectedObject.Name) .. "║\n"
-        export = export .. "║   Type: " .. selectedObject.ClassName .. string.rep(" ", 35 - #selectedObject.ClassName) .. "║\n"
-        export = export .. "║   Path: " .. selectedObject:GetFullName():sub(1, 35) .. string.rep(" ", math.max(0, 35 - #selectedObject:GetFullName())) .. "║\n"
-        export = export .. "╚═══════════════════════════════════════════════╝\n\n"
+        local export = "-- Object Export: " .. selectedObject.Name .. "\n"
+        export = export .. "-- Type: " .. selectedObject.ClassName .. "\n"
+        export = export .. "-- Path: " .. selectedObject:GetFullName() .. "\n\n"
         
         export = export .. exportObject(selectedObject)
         
@@ -914,7 +1045,6 @@ scriptsLayout.Padding = UDim.new(0, 3)
 scriptsLayout.SortOrder = Enum.SortOrder.Name
 scriptsLayout.Parent = scriptsList
 
--- Find all scripts
 local function scanScripts()
     for _, child in pairs(scriptsList:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
@@ -979,20 +1109,17 @@ tabs["Scripts"].activate = scanScripts
 -- ============================================
 -- INITIALIZE
 -- ============================================
--- Activate first tab
 tabs["Explorer"].tab.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
 tabs["Explorer"].tab.TextColor3 = Color3.fromRGB(255, 255, 255)
 tabs["Explorer"].content.Visible = true
 updateExplorer(game)
 
--- Close button
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
     stopSpying()
     getgenv().AdvancedDex = false
 end)
 
--- Minimize button
 local minimized = false
 minBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
@@ -1010,7 +1137,6 @@ minBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Notification
 pcall(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "🔍 Dex Explorer",
@@ -1027,7 +1153,4 @@ print("  📁 Explorer - Browse all objects")
 print("  📡 RemoteSpy - Monitor events")
 print("  📤 Export - Copy structure to clipboard")
 print("  📜 Scripts - View all scripts")
-print("")
-print("Commands:")
-print("  getgenv().AdvancedDex - Check if running")
 print("════════════════════════════════")
