@@ -885,16 +885,25 @@ ExportBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    -- Tentukan kolom yang akan diekspor
-    local columns = {"Name", "RarityName", "Weight", "Mutation", "Value", "Source"}
-    local csv = tableToCSV(fishDatabase, columns)
+    -- Buat string teks biasa
+    local exportText = "=== FISH DATABASE EXPORT ===\n"
+    for _, fish in pairs(fishDatabase) do
+        exportText = exportText ..
+            "🐟 " .. (fish.Name or "?") ..
+            " | Rarity: " .. (fish.RarityName or "?") ..
+            (fish.Weight and (" | Weight: " .. tostring(fish.Weight)) or "") ..
+            (fish.Mutation and fish.Mutation ~= "None" and (" | Mutation: " .. tostring(fish.Mutation)) or "") ..
+            (fish.Value and (" | Value: " .. tostring(fish.Value)) or "") ..
+            (fish.Source and (" | Source: " .. tostring(fish.Source)) or "") ..
+            "\n"
+    end
 
     -- Tampilkan di TextBox
-    toggleClipboardText(true, csv)
+    toggleClipboardText(true, exportText)
 
     -- Coba salin ke clipboard (berfungsi di Roblox Studio)
     local success = pcall(function()
-        setclipboard(csv)
+        setclipboard(exportText)
     end)
 
     if success then
