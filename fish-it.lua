@@ -823,61 +823,397 @@ end)
 -- FUNGSI EKSPOR MENGGUNAKAN FUNGSI setclipboard() (JIKA TERSEDIA)
 ExportBtn.MouseButton1Click:Connect(function()
     clearContent() 
-    addLog("💾 Preparing data for clipboard...", Color3.fromRGB(100, 255, 100))
+    addLog("💾 Menyiapkan data untuk clipboard...", Color3.fromRGB(100, 255, 100))
     
-    local totalFish = next(fishDatabase) and table.count(fishDatabase) or 0
+    -- Hitung total ikan di database
+    local totalFish = 0
+    for _ in pairs(fishDatabase) do
+        totalFish = totalFish + 1
+    end
+    
     local fullCSV = ""
+    local hasData = false
     
-    -- Kumpulkan data CSV penuh
+    -- 1. EKSPOR FISH DATABASE (PRIORITAS UTAMA)
     if totalFish > 0 then
+        addLog("📊 Mengumpulkan data Fish Database...", Color3.fromRGB(100, 200, 255))
+        
+        -- Konversi fishDatabase ke array untuk tableToCSV
         local fishList = {}
-        for _, fish in pairs(fishDatabase) do table.insert(fishList, fish) end
+        for _, fishData in pairs(fishDatabase) do
+            table.insert(fishList, fishData)
+        end
+        
+        -- Pastikan kolom sesuai dengan struktur data yang ada
         local fishColumns = {"Name", "Rarity", "RarityName", "Weight", "Mutation", "Value", "Source"}
-        local fishCSV = tableToCSV(fishList, fishColumns)
+        local fishCSV = ""
+        
+        -- Buat header CSV
+        for i, column in ipairs(fishColumns) do
+            fishCSV = fishCSV .. column
+            if i < #fishColumns then
+                fishCSV = fishCSV .. ","
+            end
+        end
+        fishCSV = fishCSV .. "\n"
+        
+        -- Buat baris data
+        for _, fishData in ipairs(fishList) do
+            for i, column in ipairs(fishColumns) do
+                local value = fishData[column] or ""
+                -- Handle nilai khusus
+                if column == "Mutation" then
+                    value = fishData.Mutation or "Normal"
+                elseif column == "Source" then
+                    value = fishData.Source or "Unknown"
+                end
+                
+                -- Escape koma dan quote
+                if tostring(value):find(",") or tostring(value):find('"') then
+                    value = '"' .. tostring(value):gsub('"', '""') .. '"'
+                end
+                
+                fishCSV = fishCSV .. tostring(value)
+                if i < #fishColumns then
+                    fishCSV = fishCSV .. ","
+                end
+            end
+            fishCSV = fishCSV .. "\n"
+        end
         
         fullCSV = fullCSV .. "### FISH DATABASE ###\n"
         fullCSV = fullCSV .. fishCSV .. "\n"
-        addLog("✅ Fish Database siap.", Color3.fromRGB(0, 255, 150))
+        hasData = true
+        addLog("✅ Fish Database siap ("..totalFish.." ikan)", Color3.fromRGB(0, 255, 150))
     else
-        addLog("⚠️ Fish Database kosong. Scan terlebih dahulu.", Color3.fromRGB(255, 150, 50))
+        addLog("⚠️ Fish Database kosong", Color3.fromRGB(255, 150, 50))
     end
     
-    if #caughtHistory > 0 then
+    -- 2. EKSPOR CATCH HISTORY (OPSIONAL)
+    if caughtHistory and #caughtHistory > 0 then
+        addLog("📈 Mengumpulkan Catch History...", Color3.fromRGB(200, 150, 255))
+        
         local historyColumns = {"Time", "Name", "Rarity", "Weight", "Mutation"}
-        local historyCSV = tableToCSV(caughtHistory, historyColumns)
+        local historyCSV = ""
+        
+        -- Buat header
+        for i, column in ipairs(historyColumns) do
+            historyCSV = historyCSV .. column
+            if i < #historyColumns then
+                historyCSV = historyCSV .. ","
+            end
+        end
+        historyCSV = historyCSV .. "\n"
+        
+        -- Buat baris data
+        for _, historyData in ipairs(caughtHistory) do
+            for i, column in ipairs(historyColumns) do
+                local value = historyData[column] or ""
+                
+                -- Format waktu jika ada
+                if column == "Time" and value then
+                    if typeof(value) == "DateTime" then
+                        value = value:FormatLocalTime("HH:mm:ss", "en-us")
+                    end
+                end
+                
+                -- Escape koma dan quote
+                if tostring(value):find(",") or tostring(value):find('"') then
+                    value = '"' .. tostring(value):gsub('"', '""') .. '"'
+                end
+                
+                historyCSV = historyCSV .. tostring(value)
+                if i < #historyColumns then
+                    historyCSV = historyCSV .. ","
+                end
+            end
+            historyCSV = historyCSV .. "\n"
+        end
         
         fullCSV = fullCSV .. "### CATCH HISTORY ###\n"
         fullCSV = fullCSV .. historyCSV .. "\n"
-        addLog("✅ Catch History siap.", Color3.fromRGB(0, 255, 150))
+        hasData = true
+        addLog("✅ Catch History siap ("..#caughtHistory.." tangkapan)", Color3.fromRGB(0, 255, 150))
     else
-        addLog("⚠️ Catch History kosong. Mulai memancing!", Color3.fromRGB(255, 150, 50))
+        addLog("⚠️ Catch History kosong", Color3.fromRGB(255, 150, 50))
     end
     
-    if fullCSV ~= "" then
-        -- COBA FUNGSI CLIPBOARD
-        if setclipboard then
-            setclipboard(fullCSV)
-            
-            addLog("--- SUKSES DISALIN ---", Color3.fromRGB(0, 255, 0))
-            addLog("✅ Data CSV telah berhasil disalin ke clipboard Anda!", Color3.fromRGB(0, 255, 150))
-            StatusLabel.Text = "Data berhasil disalin!"
-        elseif fullCSV.setclipboard then -- Coba metode Executor lain
-            fullCSV:setclipboard()
-            
-            addLog("--- SUKSES DISALIN ---", Color3.fromRGB(0, 255, 0))
-            addLog("✅ Data CSV telah berhasil disalin ke clipboard Anda!", Color3.fromRGB(0, 255, 150))
-            StatusLabel.Text = "Data berhasil disalin!"
-        else
-            -- Jika tidak ada fungsi clipboard, kembali ke solusi GUI/console (gunakan solusi GUI Textbox yang sebelumnya)
-            addLog("❌ Gagal menyalin. Fungsi setclipboard tidak ditemukan/didukung.", Color3.fromRGB(255, 50, 50))
-            addLog("💡 Coba gunakan versi skrip yang menggunakan Textbox GUI atau Console (F9).", Color3.fromRGB(255, 200, 100))
-            StatusLabel.Text = "Gagal menyalin otomatis"
+    -- 3. PROSES COPY KE CLIPBOARD
+    if hasData then
+        -- Coba berbagai metode clipboard
+        local copySuccess = false
+        
+        -- METODE 1: setclipboard() (Synapse, Krnl, dll)
+        if type(setclipboard) == "function" then
+            pcall(function()
+                setclipboard(fullCSV)
+                copySuccess = true
+                addLog("📋 Data disalin dengan setclipboard()", Color3.fromRGB(100, 255, 100))
+            end)
         end
+        
+        -- METODE 2: writeclipboard() (beberapa executor)
+        if not copySuccess and type(writeclipboard) == "function" then
+            pcall(function()
+                writeclipboard(fullCSV)
+                copySuccess = true
+                addLog("📋 Data disalin dengan writeclipboard()", Color3.fromRGB(100, 255, 100))
+            end)
+        end
+        
+        -- METODE 3: Clipboard service (Roblox native)
+        if not copySuccess then
+            pcall(function()
+                local ClipboardService = game:GetService("ClipboardService")
+                if ClipboardService then
+                    ClipboardService:SetString(fullCSV)
+                    copySuccess = true
+                    addLog("📋 Data disalin dengan ClipboardService", Color3.fromRGB(100, 255, 100))
+                end
+            end)
+        end
+        
+        -- METODE 4: GUI TextBox untuk copy manual
+        if not copySuccess then
+            addLog("❌ Fungsi clipboard tidak ditemukan", Color3.fromRGB(255, 50, 50))
+            addLog("🔄 Membuat TextBox untuk copy manual...", Color3.fromRGB(255, 200, 100))
+            
+            -- Hapus frame copy sebelumnya jika ada
+            if script.Parent:FindFirstChild("CopyFrame") then
+                script.Parent:FindFirstChild("CopyFrame"):Destroy()
+            end
+            
+            -- Buat frame untuk textbox
+            local CopyFrame = Instance.new("Frame")
+            CopyFrame.Name = "CopyFrame"
+            CopyFrame.Size = UDim2.new(0.8, 0, 0.7, 0)
+            CopyFrame.Position = UDim2.new(0.1, 0, 0.15, 0)
+            CopyFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            CopyFrame.BackgroundTransparency = 0.1
+            CopyFrame.BorderSizePixel = 2
+            CopyFrame.BorderColor3 = Color3.fromRGB(0, 200, 255)
+            CopyFrame.ZIndex = 100
+            
+            -- UIStroke untuk efek glow
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = Color3.fromRGB(0, 150, 255)
+            stroke.Thickness = 3
+            stroke.Parent = CopyFrame
+            
+            -- Corner
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = CopyFrame
+            
+            -- Title
+            local title = Instance.new("TextLabel")
+            title.Name = "Title"
+            title.Text = "📋 COPY DATA MANUAL (Select All → Ctrl+C)"
+            title.Size = UDim2.new(1, 0, 0.08, 0)
+            title.Position = UDim2.new(0, 0, 0, 0)
+            title.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+            title.BackgroundTransparency = 0.2
+            title.TextColor3 = Color3.fromRGB(255, 255, 255)
+            title.Font = Enum.Font.GothamBold
+            title.TextSize = 18
+            title.TextXAlignment = Enum.TextXAlignment.Center
+            
+            local titleCorner = Instance.new("UICorner")
+            titleCorner.CornerRadius = UDim.new(0, 8)
+            titleCorner.Parent = title
+            
+            local titleStroke = Instance.new("UIStroke")
+            titleStroke.Color = Color3.fromRGB(0, 200, 255)
+            titleStroke.Thickness = 2
+            titleStroke.Parent = title
+            
+            title.Parent = CopyFrame
+            
+            -- Close button
+            local closeBtn = Instance.new("TextButton")
+            closeBtn.Name = "CloseBtn"
+            closeBtn.Text = "✕"
+            closeBtn.Size = UDim2.new(0.08, 0, 0.08, 0)
+            closeBtn.Position = UDim2.new(0.92, 0, 0, 0)
+            closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+            closeBtn.TextColor3 = Color3.white
+            closeBtn.Font = Enum.Font.GothamBold
+            closeBtn.TextSize = 16
+            
+            closeBtn.MouseButton1Click:Connect(function()
+                CopyFrame:Destroy()
+                addLog("📦 TextBox ditutup", Color3.fromRGB(200, 200, 200))
+            end)
+            
+            local closeCorner = Instance.new("UICorner")
+            closeCorner.CornerRadius = UDim.new(0, 8)
+            closeCorner.Parent = closeBtn
+            
+            closeBtn.Parent = CopyFrame
+            
+            -- TextBox untuk data
+            local textBox = Instance.new("TextBox")
+            textBox.Name = "DataTextBox"
+            textBox.Text = fullCSV
+            textBox.Size = UDim2.new(0.96, 0, 0.84, 0)
+            textBox.Position = UDim2.new(0.02, 0, 0.1, 0)
+            textBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+            textBox.TextColor3 = Color3.fromRGB(200, 255, 200)
+            textBox.Font = Enum.Font.Code
+            textBox.TextSize = 14
+            textBox.TextXAlignment = Enum.TextXAlignment.Left
+            textBox.TextYAlignment = Enum.TextYAlignment.Top
+            textBox.TextWrapped = false
+            textBox.ClearTextOnFocus = false
+            textBox.MultiLine = true
+            textBox.ScrollingEnabled = true
+            
+            -- Auto-select all text ketika focus
+            textBox.Focused:Connect(function()
+                wait(0.1)
+                textBox:CaptureFocus()
+                textBox.SelectionStart = 1
+                textBox.CursorPosition = #textBox.Text + 1
+            end)
+            
+            local textBoxCorner = Instance.new("UICorner")
+            textBoxCorner.CornerRadius = UDim.new(0, 6)
+            textBoxCorner.Parent = textBox
+            
+            local textBoxStroke = Instance.new("UIStroke")
+            textBoxStroke.Color = Color3.fromRGB(100, 100, 150)
+            textBoxStroke.Thickness = 1
+            textBoxStroke.Parent = textBox
+            
+            textBox.Parent = CopyFrame
+            
+            -- Select All Button
+            local selectAllBtn = Instance.new("TextButton")
+            selectAllBtn.Name = "SelectAllBtn"
+            selectAllBtn.Text = "📄 SELECT ALL"
+            selectAllBtn.Size = UDim2.new(0.4, 0, 0.06, 0)
+            selectAllBtn.Position = UDim2.new(0.05, 0, 0.95, 0)
+            selectAllBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+            selectAllBtn.TextColor3 = Color3.white
+            selectAllBtn.Font = Enum.Font.GothamBold
+            selectAllBtn.TextSize = 14
+            
+            selectAllBtn.MouseButton1Click:Connect(function()
+                textBox:CaptureFocus()
+                textBox.SelectionStart = 1
+                textBox.CursorPosition = #textBox.Text + 1
+                addLog("📄 Semua teks dipilih (Ctrl+C untuk copy)", Color3.fromRGB(100, 255, 200))
+            end)
+            
+            local selectCorner = Instance.new("UICorner")
+            selectCorner.CornerRadius = UDim.new(0, 6)
+            selectCorner.Parent = selectAllBtn
+            
+            selectAllBtn.Parent = CopyFrame
+            
+            -- Copy Button
+            local copyBtn = Instance.new("TextButton")
+            copyBtn.Name = "CopyBtn"
+            copyBtn.Text = "📋 COPY TO CLIPBOARD"
+            copyBtn.Size = UDim2.new(0.4, 0, 0.06, 0)
+            copyBtn.Position = UDim2.new(0.55, 0, 0.95, 0)
+            copyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+            copyBtn.TextColor3 = Color3.white
+            copyBtn.Font = Enum.Font.GothamBold
+            copyBtn.TextSize = 14
+            
+            copyBtn.MouseButton1Click:Connect(function()
+                -- Coba copy dengan berbagai metode lagi
+                local copied = false
+                
+                if type(setclipboard) == "function" then
+                    pcall(function() setclipboard(textBox.Text) copied = true end)
+                elseif type(writeclipboard) == "function" then
+                    pcall(function() writeclipboard(textBox.Text) copied = true end)
+                end
+                
+                if copied then
+                    addLog("✅ Berhasil copy dari TextBox", Color3.fromRGB(0, 255, 150))
+                    copyBtn.Text = "✅ COPIED!"
+                    copyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+                    wait(1)
+                    copyBtn.Text = "📋 COPY TO CLIPBOARD"
+                    copyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+                else
+                    addLog("❌ Gagal copy dari TextBox", Color3.fromRGB(255, 50, 50))
+                    copyBtn.Text = "❌ FAILED"
+                    copyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                    wait(1)
+                    copyBtn.Text = "📋 COPY TO CLIPBOARD"
+                    copyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+                end
+            end)
+            
+            local copyCorner = Instance.new("UICorner")
+            copyCorner.CornerRadius = UDim.new(0, 6)
+            copyCorner.Parent = copyBtn
+            
+            copyBtn.Parent = CopyFrame
+            
+            CopyFrame.Parent = script.Parent
+            
+            addLog("📝 Gunakan TextBox di atas untuk copy manual", Color3.fromRGB(255, 255, 150))
+            StatusLabel.Text = "Gunakan TextBox untuk copy"
+            
+        else
+            -- Berhasil copy ke clipboard
+            addLog("🎉 DATA BERHASIL DISALIN KE CLIPBOARD!", Color3.fromRGB(0, 255, 0))
+            addLog("📋 Buka Excel/Google Sheets → Paste (Ctrl+V)", Color3.fromRGB(200, 255, 200))
+            
+            -- Tampilkan preview
+            addLog("📊 Preview data yang disalin:", Color3.fromRGB(200, 200, 255))
+            
+            -- Ambil beberapa baris untuk preview
+            local lines = {}
+            for line in fullCSV:gmatch("[^\r\n]+") do
+                table.insert(lines, line)
+            end
+            
+            -- Tampilkan 3-5 baris pertama
+            for i = 1, math.min(5, #lines) do
+                if i == 1 or string.find(lines[i], "###") or i <= 3 then
+                    addLog("   " .. lines[i], Color3.fromRGB(200, 255, 200))
+                end
+            end
+            
+            if #lines > 5 then
+                addLog("   ... dan " .. (#lines - 5) .. " baris lainnya", Color3.fromRGB(150, 150, 150))
+            end
+            
+            StatusLabel.Text = "✅ Data tersalin ke clipboard!"
+            
+            -- Auto-clear status setelah beberapa detik
+            wait(3)
+            StatusLabel.Text = "Ready"
+        end
+        
     else
+        addLog("❌ Tidak ada data untuk diekspor", Color3.fromRGB(255, 50, 50))
         StatusLabel.Text = "Tidak ada data untuk diekspor"
     end
 end)
-    
+
+-- Fungsi helper untuk menampilkan pesan
+function addLog(message, color)
+    -- Asumsikan ada fungsi atau UI element untuk log
+    if LogLabel then
+        LogLabel.Text = LogLabel.Text .. "\n" .. message
+        LogLabel.TextColor3 = color
+    end
+    print("[EXPORT] " .. message)
+end
+
+-- Fungsi untuk clear content
+function clearContent()
+    if LogLabel then
+        LogLabel.Text = ""
+    end
+end
 
 DestroyBtn.MouseButton1Click:Connect(function()
     addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50))
