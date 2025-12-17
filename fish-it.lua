@@ -820,58 +820,64 @@ ClearBtn.MouseButton1Click:Connect(function()
     StatusLabel.Text = "Log cleared"
 end)
 
--- FUNGSI EKSPOR MENTAH KE CONSOLE
+-- FUNGSI EKSPOR MENGGUNAKAN FUNGSI setclipboard() (JIKA TERSEDIA)
 ExportBtn.MouseButton1Click:Connect(function()
-    clearContent() -- Bersihkan log GUI saat mengekspor
-    addLog("💾 Exporting data MENTAH ke Console (F9)...", Color3.fromRGB(100, 255, 100))
+    clearContent() 
+    addLog("💾 Preparing data for clipboard...", Color3.fromRGB(100, 255, 100))
     
     local totalFish = next(fishDatabase) and table.count(fishDatabase) or 0
+    local fullCSV = ""
     
-    print("\n\n####################################################")
-    print("### FISH DEX EXPORT - Mulai Salin dari Sini")
-    print("####################################################")
-    
-    -- 1. Export Fish Database as CSV
+    -- Kumpulkan data CSV penuh
     if totalFish > 0 then
-        addLog("📋 Fish Database CSV dicetak ke Console.", Color3.fromRGB(150, 255, 255))
-        
         local fishList = {}
-        for _, fish in pairs(fishDatabase) do
-            table.insert(fishList, fish)
-        end
-        
+        for _, fish in pairs(fishDatabase) do table.insert(fishList, fish) end
         local fishColumns = {"Name", "Rarity", "RarityName", "Weight", "Mutation", "Value", "Source"}
         local fishCSV = tableToCSV(fishList, fishColumns)
         
-        print("\n=== FISH DATABASE CSV ===")
-        print(fishCSV)
+        fullCSV = fullCSV .. "### FISH DATABASE ###\n"
+        fullCSV = fullCSV .. fishCSV .. "\n"
+        addLog("✅ Fish Database siap.", Color3.fromRGB(0, 255, 150))
     else
-        addLog("⚠️ Fish Database kosong. Scan terlebih dahulu!", Color3.fromRGB(255, 150, 50))
+        addLog("⚠️ Fish Database kosong. Scan terlebih dahulu.", Color3.fromRGB(255, 150, 50))
     end
     
-    -- 2. Export Catch History as CSV
     if #caughtHistory > 0 then
-        addLog("📋 Catch History CSV dicetak ke Console.", Color3.fromRGB(150, 255, 255))
-        
         local historyColumns = {"Time", "Name", "Rarity", "Weight", "Mutation"}
         local historyCSV = tableToCSV(caughtHistory, historyColumns)
         
-        print("\n=== CATCH HISTORY CSV ===")
-        print(historyCSV)
+        fullCSV = fullCSV .. "### CATCH HISTORY ###\n"
+        fullCSV = fullCSV .. historyCSV .. "\n"
+        addLog("✅ Catch History siap.", Color3.fromRGB(0, 255, 150))
     else
         addLog("⚠️ Catch History kosong. Mulai memancing!", Color3.fromRGB(255, 150, 50))
     end
     
-    print("\n####################################################")
-    print("### FISH DEX EXPORT - Akhir Salin Sampai Sini")
-    print("####################################################\n\n")
-    
-    local instructions = "INSTRUKSI: Buka Console (F9) dan salin semua teks mentah CSV di antara blok penanda."
-    addLog("--- DATA MENTAH DICETAK ---", Color3.fromRGB(255, 255, 0))
-    addLog(instructions, Color3.fromRGB(150, 200, 255))
-    
-    StatusLabel.Text = "Data mentah CSV dicetak ke Console (F9)"
+    if fullCSV ~= "" then
+        -- COBA FUNGSI CLIPBOARD
+        if setclipboard then
+            setclipboard(fullCSV)
+            
+            addLog("--- SUKSES DISALIN ---", Color3.fromRGB(0, 255, 0))
+            addLog("✅ Data CSV telah berhasil disalin ke clipboard Anda!", Color3.fromRGB(0, 255, 150))
+            StatusLabel.Text = "Data berhasil disalin!"
+        elseif fullCSV.setclipboard then -- Coba metode Executor lain
+            fullCSV:setclipboard()
+            
+            addLog("--- SUKSES DISALIN ---", Color3.fromRGB(0, 255, 0))
+            addLog("✅ Data CSV telah berhasil disalin ke clipboard Anda!", Color3.fromRGB(0, 255, 150))
+            StatusLabel.Text = "Data berhasil disalin!"
+        else
+            -- Jika tidak ada fungsi clipboard, kembali ke solusi GUI/console (gunakan solusi GUI Textbox yang sebelumnya)
+            addLog("❌ Gagal menyalin. Fungsi setclipboard tidak ditemukan/didukung.", Color3.fromRGB(255, 50, 50))
+            addLog("💡 Coba gunakan versi skrip yang menggunakan Textbox GUI atau Console (F9).", Color3.fromRGB(255, 200, 100))
+            StatusLabel.Text = "Gagal menyalin otomatis"
+        end
+    else
+        StatusLabel.Text = "Tidak ada data untuk diekspor"
+    end
 end)
+    
 
 DestroyBtn.MouseButton1Click:Connect(function()
     addLog("⚠️ Destroying script in 3 seconds...", Color3.fromRGB(255, 50, 50))
